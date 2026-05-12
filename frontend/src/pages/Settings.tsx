@@ -1,0 +1,140 @@
+import React, { useState } from 'react';
+import GlassCard from '../components/GlassCard';
+import { History, CreditCard, ShieldCheck, Cpu } from 'lucide-react';
+
+export default function Settings() {
+  const [saved, setSaved] = useState(false);
+
+  return (
+    <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '40px 24px' }}>
+      <header style={{ marginBottom: '32px' }}>
+        <h1 style={{ fontSize: '32px', fontWeight: 800, color: '#f8fafc', margin: 0 }}>Portal Settings</h1>
+        <p style={{ color: '#64748b', margin: '8px 0 0' }}>Manage identifiers, API bridge, and paper trading capital</p>
+      </header>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 400px', gap: '32px' }}>
+        
+        {/* Left Column: Connections & Account */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+          
+          <GlassCard title="🔌 API Bridge Connections" subtitle="Centralized connectivity for multi-asset execution" icon={<Cpu size={20} />}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px', marginTop: '20px' }}>
+              <div>
+                <h4 style={sectionTitleStyle}>BINANCE (CRYPTO)</h4>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={labelStyle}>API KEY</label>
+                  <input type="password" placeholder="••••••••••••••••" style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>API SECRET</label>
+                  <input type="password" placeholder="••••••••••••••••" style={inputStyle} />
+                </div>
+              </div>
+              <div>
+                <h4 style={sectionTitleStyle}>METATRADER 5 (FOREX)</h4>
+                <div style={{ marginBottom: '16px' }}>
+                  <label style={labelStyle}>ACCOUNT LOGIN</label>
+                  <input type="text" placeholder="88210452" style={inputStyle} />
+                </div>
+                <div>
+                  <label style={labelStyle}>SERVER ADDRESS</label>
+                  <input type="text" placeholder="MT5-Global-Live" style={inputStyle} />
+                </div>
+              </div>
+            </div>
+            
+            <div style={{ marginTop: '32px', display: 'flex', alignItems: 'center', gap: '16px' }}>
+              <button 
+                onClick={() => { setSaved(true); setTimeout(() => setSaved(false), 2000); }}
+                style={primaryBtnStyle}
+              >
+                SAVE CONNECTIONS
+              </button>
+              {saved && <span style={{ color: '#10b981', fontSize: '12px', fontWeight: 700 }}>✓ UPDATED SUCCESSFULLY</span>}
+            </div>
+          </GlassCard>
+
+          <GlassCard title="🛡️ Security & Privacy" subtitle="Access control and session management" icon={<ShieldCheck size={20} />}>
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+               <div>
+                 <div style={{ fontSize: '14px', fontWeight: 600, color: '#f8fafc' }}>Two-Factor Authentication</div>
+                 <div style={{ fontSize: '12px', color: '#64748b' }}>Secure your manual overrides with biometric or app-based 2FA</div>
+               </div>
+               <div style={toggleStyle}>ON</div>
+             </div>
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0' }}>
+               <div>
+                 <div style={{ fontSize: '14px', fontWeight: 600, color: '#f8fafc' }}>AI Execution Confirmations</div>
+                 <div style={{ fontSize: '12px', color: '#64748b' }}>Require manual signature before AI executes any trade</div>
+               </div>
+               <div style={{ ...toggleStyle, background: 'rgba(255,255,255,0.05)', color: '#475569' }}>OFF</div>
+             </div>
+          </GlassCard>
+        </div>
+
+        {/* Right Column: Wallet & History */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+          
+          <GlassCard title="💳 Capital Management" icon={<CreditCard size={20} />}>
+            <div style={{
+              background: 'linear-gradient(135deg, rgba(212,175,55,0.1), rgba(0,0,0,0))',
+              borderRadius: '16px', padding: '24px', textAlign: 'center', marginBottom: '24px',
+              border: '1px solid rgba(212,175,55,0.1)'
+            }}>
+              <div style={{ fontSize: '11px', fontWeight: 800, color: '#d4af37', letterSpacing: '0.1em' }}>PAPER BALANCE</div>
+              <div style={{ fontSize: '32px', fontWeight: 900, color: '#f8fafc', marginTop: '8px' }}>$124,530.42</div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <button style={outlineBtnStyle}>DEPOSIT CAPITAL</button>
+              <button style={{ ...outlineBtnStyle, borderColor: 'rgba(239,68,68,0.2)', color: '#f87171' }}>WITHDRAW FUNDS</button>
+            </div>
+          </GlassCard>
+
+          <GlassCard title="📜 Recent Logs" icon={<History size={20} />}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {[1, 2, 3].map(i => (
+                <div key={i} style={{ display: 'flex', gap: '12px', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid rgba(255,255,255,0.03)' }}>
+                  <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#d4af37' }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: '#e2e8f0' }}>API Connection Success</div>
+                    <div style={{ fontSize: '10px', color: '#475569' }}>XAU/USD · 2 mins ago</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </GlassCard>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+const sectionTitleStyle: React.CSSProperties = {
+  fontSize: '11px', fontWeight: 800, color: '#64748b', letterSpacing: '0.1em', marginBottom: '16px'
+};
+
+const labelStyle: React.CSSProperties = {
+  display: 'block', fontSize: '10px', fontWeight: 700, color: '#475569', marginBottom: '6px'
+};
+
+const inputStyle: React.CSSProperties = {
+  width: '100%', background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)',
+  borderRadius: '10px', padding: '12px', color: '#f8fafc', fontSize: '13px', outline: 'none'
+};
+
+const primaryBtnStyle: React.CSSProperties = {
+  background: '#d4af37', color: '#050b14', border: 'none', padding: '12px 24px',
+  borderRadius: '10px', fontWeight: 800, fontSize: '12px', cursor: 'pointer', letterSpacing: '0.05em'
+};
+
+const outlineBtnStyle: React.CSSProperties = {
+  background: 'transparent', border: '1px solid rgba(255,255,255,0.08)', color: '#f8fafc',
+  padding: '12px', borderRadius: '10px', fontWeight: 700, fontSize: '12px', cursor: 'pointer'
+};
+
+const toggleStyle: React.CSSProperties = {
+  padding: '4px 12px', borderRadius: '20px', background: 'rgba(16,185,129,0.1)',
+  color: '#10b981', fontSize: '10px', fontWeight: 900
+};

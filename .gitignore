@@ -1,0 +1,41 @@
+# Node
+node_modules/
+dist/
+build/
+.env
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+pip-log.txt
+pip-delete-this-directory.txt
+.tox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+*.db
+*.sqlite3
+
+# ML
+model/
+*.json
+!ml/model/report.json
+!ml/model/xgb_xauusd.json
+!ml/model/scaler.pkl
+
+# Logs
+*.log
+backend_log.txt
+
+# OS
+.DS_Store
+Thumbs.db
