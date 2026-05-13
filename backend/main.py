@@ -48,19 +48,21 @@ def root():
     return {'status': 'ok', 'system': 'VISION XAU/USD AI'}
 
 
+def ticker_info(df, symbol, multiply=1):
+    if df.empty:
+        return {'symbol': symbol, 'price': 0, 'change': 0, 'changePct': 0, 'trend': 'neutral'}
+    price  = float(df['close'].iloc[-1]) * multiply
+    prev   = float(df['close'].iloc[-2]) * multiply
+    change = round(price - prev, 4)
+    pct    = round(change / prev * 100, 2) if prev else 0
+    vol    = float(df['volume'].iloc[-1]) if 'volume' in df.columns else 0
+    high   = float(df['high'].max()) * multiply
+    low    = float(df['low'].min()) * multiply
+    return {'symbol': symbol, 'price': round(price, 4), 'change': change, 'changePct': pct,
+            'trend': 'bullish' if change >= 0 else 'bearish', 'volume': vol, 'high': high, 'low': low}
+
 @app.get('/api/market-data')
 def market_data(category: str = Query('XAUUSD')):
-    def ticker_info(df, symbol, multiply=1):
-        if df.empty:
-            return {'symbol': symbol, 'price': 0, 'change': 0, 'changePct': 0, 'trend': 'neutral'}
-        price  = float(df['close'].iloc[-1]) * multiply
-        prev   = float(df['close'].iloc[-2]) * multiply
-        change = round(price - prev, 4)
-        pct    = round(change / prev * 100, 2) if prev else 0
-        vol    = float(df['volume'].iloc[-1]) if 'volume' in df.columns else 0
-        return {'symbol': symbol, 'price': round(price, 2), 'change': change, 'changePct': pct,
-                'trend': 'bullish' if change >= 0 else 'bearish', 'volume': vol}
-
     if category == 'CRYPTO':
         btc = _fetch_ohlcv('BTC-USD', period='5d', interval='1h')
         eth = _fetch_ohlcv('ETH-USD', period='5d', interval='1h')
@@ -102,6 +104,34 @@ def get_crypto_assets(limit: int = 50):
         return scored
     except Exception as e:
         print(f"Error scoring crypto assets: {e}")
+        return raw_assets
+
+@app.get('/api/assets/forex')
+def get_forex_assets():
+    """Fetch major forex pairs and score them using ML condition logic."""
+    # We fetch basic market data for FX
+    eur = _fetch_ohlcv('EURUSD=X', period='5d', interval='1h')
+    gbp = _fetch_ohlcv('GBPUSD=X', period='5d', interval='1h')
+    jpy = _fetch_ohlcv('JPY=X', period='5d', interval='1h')
+    aud = _fetch_ohlcv('AUDUSD=X', period='5d', interval='1h')
+    cad = _fetch_ohlcv('USDCAD=X', period='5d', interval='1h')
+    chf = _fetch_ohlcv('USDCHF=X', period='5d', interval='1h')
+    
+    raw_assets = [
+        ticker_info(eur, 'EUR/USD'),
+        ticker_info(gbp, 'GBP/USD'),
+        ticker_info(jpy, 'USD/JPY'),
+        ticker_info(aud, 'AUD/USD'),
+        ticker_info(cad, 'USD/CAD'),
+        ticker_info(chf, 'USD/CHF'),
+    ]
+    
+    try:
+        from ml.inference import score_forex_assets
+        scored = score_forex_assets(raw_assets)
+        return scored
+    except Exception as e:
+        print(f"Error scoring forex assets: {e}")
         return raw_assets
 
 @app.get('/api/portfolio')

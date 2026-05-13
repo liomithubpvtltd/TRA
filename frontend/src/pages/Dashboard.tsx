@@ -3,7 +3,8 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { 
   fetchMarketData, fetchMacroData, fetchNews, 
-  fetchPrediction, fetchSMCPatterns, fetchCryptoAssets, fetchPortfolio 
+  fetchPrediction, fetchSMCPatterns, fetchCryptoAssets, 
+  fetchForexAssets, fetchPortfolio 
 } from '../services/api';
 
 import Header from '../components/Header';
@@ -61,6 +62,7 @@ export default function Dashboard() {
   const { data: macro     } = useQuery({ queryKey: ['macro'],      queryFn: fetchMacroData,     refetchInterval: REFETCH_INTERVAL });
   const { data: news      } = useQuery({ queryKey: ['news'],       queryFn: fetchNews,          refetchInterval: 60000 });
   const { data: crypto    } = useQuery({ queryKey: ['crypto'],     queryFn: fetchCryptoAssets,  refetchInterval: 15000 });
+  const { data: forex     } = useQuery({ queryKey: ['forex'],      queryFn: fetchForexAssets,   refetchInterval: 15000 });
   const { data: portfolio } = useQuery({ queryKey: ['portfolio'],  queryFn: fetchPortfolio,     refetchInterval: REFETCH_INTERVAL });
 
   const now = new Intl.DateTimeFormat(undefined, {
@@ -98,11 +100,11 @@ export default function Dashboard() {
           <div>
             <h2 style={categoryHeaderStyle}>📊 MARKET INTELLIGENCE</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '24px' }}>
-              <GlassCard title="🎯 Trading Signals" subtitle={activeCategory === 'CRYPTO' ? 'Top Spot Crypto Opportunities — ML Ranked' : activeCategory === 'FOREX' ? 'Top FX Pair Recommendations' : 'Automated action recommendations'} icon={<Shield size={18} />}>
+              <GlassCard title="🎯 Trading Signals" subtitle={activeCategory === 'CRYPTO' ? 'Top Spot Crypto Opportunities — ML Ranked' : activeCategory === 'FOREX' ? 'Top FX Pair Recommendations — LIVE' : 'Automated action recommendations'} icon={<Shield size={18} />}>
                 {activeCategory === 'CRYPTO' ? (
                   <CryptoSignals assets={crypto || []} />
                 ) : activeCategory === 'FOREX' ? (
-                  <ForexSignals />
+                  <ForexSignals signals={forex || []} />
                 ) : (
                   prediction && <Recommendations prediction={prediction} />
                 )}

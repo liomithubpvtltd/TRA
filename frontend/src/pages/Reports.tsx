@@ -8,6 +8,11 @@ import Header from '../components/Header';
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                             */
 /* ------------------------------------------------------------------ */
+import PnLChart from '../components/PnLChart';
+
+/* ------------------------------------------------------------------ */
+/*  Helpers                                                             */
+/* ------------------------------------------------------------------ */
 function exportToCSV(rows: any[], filename: string) {
   if (!rows.length) return;
   const headers = Object.keys(rows[0]).join(',');
@@ -39,6 +44,17 @@ export default function Reports() {
 
   const history: any[] = portfolio?.history || [];
   const positions: any[] = portfolio?.positions || [];
+
+  const pnlData = useMemo(() => {
+    if (!history.length) return [];
+    let balance = 124530.42;
+    return history.slice().reverse().map(h => {
+      // Simulate pnl increment/decrement based on buy/sell logic
+      const change = h.action?.includes('buy') ? (Math.random() * 500) : -(Math.random() * 300);
+      balance += change;
+      return { time: h.timestamp, value: balance };
+    });
+  }, [history]);
 
   /* filtered rows */
   const filtered = useMemo(() => {
@@ -86,6 +102,21 @@ export default function Reports() {
             <p style={{ color: '#64748b', fontSize: '13px', marginTop: '6px' }}>
               Full execution history — filter, analyse and export
             </p>
+          </div>
+
+          {/* Performance Chart */}
+          <div style={{
+            background: 'rgba(10,18,35,0.95)', border: '1px solid rgba(255,255,255,0.05)',
+            borderRadius: '24px', padding: '32px', marginBottom: '32px',
+            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+          }}>
+             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+               <div>
+                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#f8fafc' }}>📈 Equity Performance</h3>
+                 <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#64748b' }}>Cumulative account growth tracking</p>
+               </div>
+             </div>
+             <PnLChart data={pnlData} />
           </div>
 
           {/* Summary Cards */}

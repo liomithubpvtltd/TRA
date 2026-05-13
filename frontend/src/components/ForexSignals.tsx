@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Activity, LineChart } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -6,27 +5,21 @@ import { addManualPosition } from '../services/api';
 
 interface ForexSignal {
   symbol: string;
-  name: string;
+  name?: string;
   action: 'BUY' | 'SELL' | 'HOLD';
-  score: number; // /100
+  ml_score: number;
   ema_status: 'Bullish' | 'Bearish' | 'Neutral';
   trend: string;
   support: number;
   resistance: number;
-  current_price: number;
+  price: number;
 }
 
-const mockForexSignals: ForexSignal[] = [
-  { symbol: 'EUR/USD', name: 'Euro / US Dollar', action: 'SELL', score: 88, ema_status: 'Bearish', trend: 'Strong Down', support: 1.0710, resistance: 1.0850, current_price: 1.0785 },
-  { symbol: 'GBP/USD', name: 'British Pound / US Dollar', action: 'SELL', score: 82, ema_status: 'Bearish', trend: 'Down', support: 1.2500, resistance: 1.2680, current_price: 1.2590 },
-  { symbol: 'USD/JPY', name: 'US Dollar / Japanese Yen', action: 'BUY', score: 79, ema_status: 'Bullish', trend: 'Strong Up', support: 149.50, resistance: 152.00, current_price: 150.80 },
-  { symbol: 'AUD/USD', name: 'Australian Dollar / US Dollar', action: 'HOLD', score: 55, ema_status: 'Neutral', trend: 'Sideways', support: 0.6450, resistance: 0.6600, current_price: 0.6520 },
-  { symbol: 'USD/CAD', name: 'US Dollar / Canadian Dollar', action: 'BUY', score: 72, ema_status: 'Bullish', trend: 'Up', support: 1.3400, resistance: 1.3650, current_price: 1.3530 },
-  { symbol: 'USD/CHF', name: 'US Dollar / Swiss Franc', action: 'HOLD', score: 45, ema_status: 'Neutral', trend: 'Sideways', support: 0.8800, resistance: 0.8950, current_price: 0.8870 },
-];
+interface Props {
+  signals: ForexSignal[];
+}
 
-export default function ForexSignals() {
-  const [signals] = useState<ForexSignal[]>(mockForexSignals);
+export default function ForexSignals({ signals }: Props) {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
@@ -41,13 +34,21 @@ export default function ForexSignals() {
 
   const executeTrade = (sig: ForexSignal) => {
     if (sig.action === 'HOLD') return;
-    if (window.confirm(`Execute live ${sig.action} for ${sig.symbol} at ${sig.current_price}?`)) {
-      mutation.mutate({ symbol: sig.symbol, side: sig.action.toLowerCase(), price: sig.current_price });
+    if (window.confirm(`Execute live ${sig.action} for ${sig.symbol} at ${sig.price}?`)) {
+      mutation.mutate({ symbol: sig.symbol, side: sig.action.toLowerCase(), price: sig.price });
     }
   };
 
+  if (!signals || signals.length === 0) {
+    return (
+      <div style={{ textAlign: 'center', padding: '40px', color: '#64748b', fontSize: '13px' }}>
+        Analyzing live forex conditions...
+      </div>
+    );
+  }
+
   // Sort by score descending
-  const sorted = [...signals].sort((a, b) => b.score - a.score);
+  const sorted = [...signals].sort((a, b) => b.ml_score - a.ml_score);
 
   return (
     <div style={{
@@ -94,12 +95,12 @@ export default function ForexSignals() {
                      <LineChart size={12} />
                    </a>
                  </div>
-                 <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>{sig.name}</div>
+                 <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>Forex Spot</div>
               </div>
 
               {/* Score */}
-              <div style={{ fontSize: '14px', fontWeight: 900, color: sig.score >= 80 ? '#10b981' : sig.score <= 40 ? '#ef4444' : '#d4af37' }}>
-                 {sig.score}/100
+              <div style={{ fontSize: '14px', fontWeight: 900, color: sig.ml_score >= 70 ? '#10b981' : sig.ml_score <= 40 ? '#ef4444' : '#d4af37' }}>
+                 {sig.ml_score}/100
               </div>
 
               {/* Action */}
@@ -126,13 +127,13 @@ export default function ForexSignals() {
 
               {/* Price */}
               <div style={{ fontSize: '13px', fontWeight: 800, color: '#f8fafc' }}>
-                 {sig.current_price.toLocaleString(undefined, { minimumFractionDigits: 3 })}
+                 {sig.price.toLocaleString(undefined, { minimumFractionDigits: 4 })}
               </div>
 
               {/* Support / Resistance */}
               <div style={{ textAlign: 'right' }}>
-                 <div style={{ fontSize: '11px', fontWeight: 700, color: '#ef4444' }}>R: {sig.resistance.toLocaleString(undefined, { minimumFractionDigits: 3 })}</div>
-                 <div style={{ fontSize: '10px', fontWeight: 600, color: '#10b981', marginTop: '2px' }}>S: {sig.support.toLocaleString(undefined, { minimumFractionDigits: 3 })}</div>
+                 <div style={{ fontSize: '11px', fontWeight: 700, color: '#ef4444' }}>R: {sig.resistance.toLocaleString(undefined, { minimumFractionDigits: 4 })}</div>
+                 <div style={{ fontSize: '10px', fontWeight: 600, color: '#10b981', marginTop: '2px' }}>S: {sig.support.toLocaleString(undefined, { minimumFractionDigits: 4 })}</div>
               </div>
 
             </motion.div>

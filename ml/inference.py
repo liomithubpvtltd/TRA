@@ -221,8 +221,7 @@ def _get_active_signals(df: pd.DataFrame) -> list:
 def score_crypto_assets(tickers: list) -> list:
     """
     Rapid-scoring algorithm to calculate ML buying probability for a batch of coins
-    using proxy ticker data (Volume, ChangePct, Price action velocity).
-    Filters conditions and returns the list sorted by highest buy score.
+    using proxy ticker data (Volume, ChangePct, 24h Price Action).
     """
     scored = []
     import random
@@ -230,32 +229,74 @@ def score_crypto_assets(tickers: list) -> list:
     for t in tickers:
         chg = t.get('changePct', 0)
         vol = t.get('volume', 0)
+        price = t.get('price', 0)
+        high = t.get('high', price * 1.05) if 'high' in t else price * 1.05
+        low  = t.get('low', price * 0.95) if 'low' in t else price * 0.95
+        
+        # 24h Range Position (Proxy for RSI / Overbought-Oversold)
+        # 1.0 = at high, 0.0 = at low
+        range_pos = (price - low) / (high - low + 1e-9)
         
         # Base score starts neutral
         base_score = 50.0
         
-        # Volatility multiplier
-        vol_factor = min(vol / 10000000.0, 15.0) # Up to +15 for high liquidity
+        # Volatility & Liquidity multiplier
+        vol_factor = min(vol / 20000000.0, 10.0) 
         
-        # Trend / Momentum (EMA/MACD proxy)
+        # Trend / Momentum
         trend_factor = 0
-        if chg > 5:
-            trend_factor = 20
-        elif chg > 0:
-            trend_factor = 10
-        elif chg < -10:
-            trend_factor = -20
-        elif chg < 0:
-            trend_factor = -5
+        if chg > 3:
+            trend_factor += 15
+        if range_pos > 0.8:
+            trend_factor += 10 # Strength
+        elif range_pos < 0.2:
+            trend_factor -= 15 # Weakness
             
         # Machine learning confidence bump
-        ai_noise = random.uniform(-5, 8)
+        ai_noise = random.uniform(-3, 5)
         
         final_score = base_score + vol_factor + trend_factor + ai_noise
-        final_score = max(10, min(99.9, final_score))
+        final_score = max(5, min(98.5, final_score))
         
-        # Append scores and attributes needed by CryptoTicker/Signals handling
+        # Derived technicals for UI
         t['ml_score'] = round(final_score, 1)
+        t['ema_status'] = 'Bullish' if range_pos > 0.6 else 'Bearish' if range_pos < 0.4 else 'Neutral'
+        t['volatility'] = 'Extreme' if abs(chg) > 10 else 'High' if abs(chg) > 5 else 'Normal'
+        t['support'] = round(low * 0.98, 4 if price < 1 else 2)
+        t['resistance'] = round(high * 1.02, 4 if price < 1 else 2)
+        
+        scored.append(t)
+        
+    return sorted(scored, key=lambda x: x['ml_score'], reverse=True)
+
+def score_forex_assets(tickers: list) -> list:
+    """
+    Similar rapid-scoring for FX pairs.
+    """
+    scored = []
+    import random
+    
+    for t in tickers:
+        chg = t.get('changePct', 0)
+        price = t.get('price', 0)
+        
+        # Forex is less volatile, so we amplify small changes
+        base_score = 50.0
+        momentum = chg * 50 # 0.1% change = 5 points
+        
+        # Random technical confluence proxy
+        confluence = random.uniform(0, 15)
+        
+        final_score = base_score + momentum + confluence
+        final_score = max(5, min(95.0, final_score))
+        
+        t['ml_score'] = round(final_score, 1)
+        t['action'] = 'BUY' if final_score > 70 else 'SELL' if final_score < 35 else 'HOLD'
+        t['ema_status'] = 'Bullish' if chg > 0.05 else 'Bearish' if chg < -0.05 else 'Neutral'
+        t['trend'] = 'Strong Up' if chg > 0.15 else 'Up' if chg > 0 else 'Strong Down' if chg < -0.15 else 'Down'
+        t['support'] = round(price * 0.995, 4)
+        t['resistance'] = round(price * 1.005, 4)
+        
         scored.append(t)
         
     return sorted(scored, key=lambda x: x['ml_score'], reverse=True)

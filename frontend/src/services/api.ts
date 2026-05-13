@@ -171,6 +171,12 @@ export async function fetchCryptoAssets(): Promise<any[]> {
   return [];
 }
 
+export async function fetchForexAssets(): Promise<any[]> {
+  const res = await fetch(`${API_BASE}/assets/forex`);
+  if (res.ok) return await res.json();
+  return [];
+}
+
 export async function addManualPosition(symbol: string, side: string, price: number): Promise<any> {
     const res = await fetch(`${API_BASE}/portfolio/add?symbol=${symbol}&side=${side}&price=${price}`, {
         method: 'POST'
