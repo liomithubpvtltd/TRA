@@ -9,7 +9,7 @@ import { useAuth } from '../context/AuthContext';
     any complex logic.
 */
 
-export default function Settings() {
+export default function Profile() {
   const { user } = useAuth();
   
   const [profileData, setProfileData] = useState({

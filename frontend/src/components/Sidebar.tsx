@@ -1,14 +1,13 @@
 import { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Briefcase, ClipboardList, FileText, Calculator, User, Bell, ChevronRight, Menu, X, ShieldCheck } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { LayoutDashboard, Briefcase, ClipboardList, FileText, Calculator, User, Bell, ChevronRight, X, ShieldCheck } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar() {
   const location = useLocation();
   const [hovered, setHovered] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { user, logout } = useAuth();
 
   const menuItems = [
@@ -18,7 +17,7 @@ export default function Sidebar() {
     { name: 'Reports',     icon: <FileText size={20} />,        path: '/reports' },
     { name: 'Calculators', icon: <Calculator size={20} />,      path: '/calculators' },
     { name: 'Admin',       icon: <ShieldCheck size={20} />,     path: '/admin',      adminOnly: true },
-    { name: 'Profile',     icon: <User size={20} />,            path: '/settings' },
+    { name: 'Profile',     icon: <User size={20} />,            path: '/profile' },
   ];
 
   const visibleItems = menuItems.filter(item => !item.adminOnly || user?.role === 'admin');

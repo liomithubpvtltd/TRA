@@ -1,11 +1,17 @@
 import ccxt
 import pandas as pd
 import time
+import os
 
 class CryptoService:
     def __init__(self):
-        # We'll use Binance for free market data scan
+        # Use Binance authenticated connection if keys exist
+        api_key = os.getenv('BINANCE_API_KEY')
+        secret = os.getenv('BINANCE_SECRET_KEY')
+        
         self.exchange = ccxt.binance({
+            'apiKey': api_key,
+            'secret': secret,
             'enableRateLimit': True,
         })
     
@@ -19,7 +25,9 @@ class CryptoService:
                     'symbol': t['symbol'].replace('/USDT', ''),
                     'price': t['last'],
                     'changePct': t['percentage'],
-                    'volume': t['quoteVolume']
+                    'volume': t['quoteVolume'],
+                    'high': t.get('high'),
+                    'low': t.get('low')
                 }
                 for sym, t in tickers.items() if '/USDT' in sym and t['last'] is not None and t['quoteVolume'] is not None
             ]

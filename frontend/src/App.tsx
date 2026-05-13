@@ -3,7 +3,7 @@ import Sidebar from './components/Sidebar';
 import AnimatedBackground from './components/AnimatedBackground';
 import Dashboard from './pages/Dashboard';
 import Calculators from './pages/Calculators';
-import Settings from './pages/Settings';
+import Profile from './pages/Profile';
 import Portfolio from './pages/Portfolio';
 import Orders from './pages/Orders';
 import Reports from './pages/Reports';
@@ -49,7 +49,7 @@ function LayoutContent() {
           <Route path="/orders" element={<PrivateRoute><Orders /></PrivateRoute>} />
           <Route path="/reports" element={<PrivateRoute><Reports /></PrivateRoute>} />
           <Route path="/calculators" element={<PrivateRoute><Calculators /></PrivateRoute>} />
-          <Route path="/settings" element={<PrivateRoute><Settings /></PrivateRoute>} />
+          <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
           <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
         </Routes>
       </div>
