@@ -11,9 +11,10 @@ interface CryptoAsset {
 
 interface Props {
   assets: CryptoAsset[];
+  onAssetClick?: (asset: CryptoAsset) => void;
 }
 
-export default function CryptoTicker({ assets }: Props) {
+export default function CryptoTicker({ assets, onAssetClick }: Props) {
   if (!assets || assets.length === 0) return null;
 
   return (
@@ -34,6 +35,7 @@ export default function CryptoTicker({ assets }: Props) {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.02 }}
+            onClick={() => onAssetClick?.(asset)}
             style={{
               display: 'grid',
               gridTemplateColumns: '50px 1.5fr 1fr 1fr 1fr',
@@ -42,8 +44,10 @@ export default function CryptoTicker({ assets }: Props) {
               background: 'rgba(30,58,138,0.05)',
               border: '1px solid rgba(255,255,255,0.03)',
               borderRadius: '12px',
-              gap: '12px'
+              gap: '12px',
+              cursor: onAssetClick ? 'pointer' : 'default'
             }}
+            whileHover={onAssetClick ? { background: 'rgba(30,58,138,0.1)' } : {}}
           >
             {/* Rank / Score */}
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', background: 'rgba(212,175,55,0.1)', padding: '6px', borderRadius: '8px', border: '1px solid rgba(212,175,55,0.2)' }}>

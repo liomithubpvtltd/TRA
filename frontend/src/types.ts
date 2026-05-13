@@ -30,6 +30,7 @@ export interface Prediction {
   session_bias?: string;
   confluence_score?: number;
   execution_log?: string[];
+  error?: string;
 }
 
 export interface SMCPattern {

@@ -13,6 +13,7 @@ interface LiveCryptoAsset {
 
 interface Props {
   assets: LiveCryptoAsset[];
+  onAssetClick?: (symbol: string) => void;
 }
 
 function deriveSignal(asset: LiveCryptoAsset) {
@@ -34,7 +35,7 @@ function deriveSignal(asset: LiveCryptoAsset) {
   return { symbol, action, score, ema_status, vol_label, vix_label, support, resistance };
 }
 
-export default function CryptoSignals({ assets }: Props) {
+export default function CryptoSignals({ assets, onAssetClick }: Props) {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
@@ -47,11 +48,16 @@ export default function CryptoSignals({ assets }: Props) {
     onError: (err: any) => alert('Execution failed: ' + (err.message || 'Unknown')),
   });
 
-  const executeTrade = (asset: LiveCryptoAsset, action: string) => {
-    if (action === 'HOLD') return;
-    const sym = asset.symbol.includes('/') ? asset.symbol : `${asset.symbol}/USDT`;
-    if (window.confirm(`Execute live ${action} for ${sym} at $${asset.price}?`)) {
-      mutation.mutate({ symbol: sym, side: action.toLowerCase(), price: asset.price });
+  const handleRowClick = (asset: LiveCryptoAsset, action: string, symbol: string) => {
+    // 1. Focus the asset
+    onAssetClick?.(symbol);
+    
+    // 2. If it's a valid signal, offer trade
+    if (action !== 'HOLD') {
+      const sym = asset.symbol.includes('/') ? asset.symbol : `${asset.symbol}/USDT`;
+      if (window.confirm(`Execute live ${action} for ${sym} at $${asset.price}?`)) {
+        mutation.mutate({ symbol: sym, side: action.toLowerCase(), price: asset.price });
+      }
     }
   };
 
@@ -63,7 +69,8 @@ export default function CryptoSignals({ assets }: Props) {
   }
 
   return (
-    <div style={{ background: 'rgba(5,11,20,0.4)', borderRadius: '20px', overflow: 'hidden' }}>
+    <div style={{ background: 'rgba(5,11,20,0.4)', borderRadius: '20px', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+      <div style={{ minWidth: '800px' }}>
       {/* Header Row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1.6fr 0.7fr 0.7fr 0.9fr 0.9fr 0.9fr 1fr', gap: '8px', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '10px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
         <div>Asset</div><div>Score</div><div>Action</div><div>EMA</div><div>Volume</div><div>Price</div><div style={{ textAlign: 'right' }}>Sup / Res</div>
@@ -83,8 +90,8 @@ export default function CryptoSignals({ assets }: Props) {
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.02 }}
-              onClick={() => executeTrade(asset, action)}
-              whileHover={action !== 'HOLD' ? { background: 'rgba(255,255,255,0.05)', border: `1px solid ${actionColor}44` } : {}}
+              onClick={() => handleRowClick(asset, action, symbol)}
+              whileHover={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${actionColor}44` }}
               style={{
                 display: 'grid', gridTemplateColumns: '1.6fr 0.7fr 0.7fr 0.9fr 0.9fr 0.9fr 1fr', gap: '8px', alignItems: 'center',
                 padding: '10px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: '10px',
@@ -143,6 +150,7 @@ export default function CryptoSignals({ assets }: Props) {
             </motion.div>
           );
         })}
+      </div>
       </div>
     </div>
   );

@@ -17,9 +17,10 @@ interface ForexSignal {
 
 interface Props {
   signals: ForexSignal[];
+  onAssetClick?: (symbol: string) => void;
 }
 
-export default function ForexSignals({ signals }: Props) {
+export default function ForexSignals({ signals, onAssetClick }: Props) {
   const queryClient = useQueryClient();
 
   const mutation = useMutation({
@@ -32,10 +33,15 @@ export default function ForexSignals({ signals }: Props) {
     onError: (err: any) => alert("FX Execution failed: " + (err.message || 'Unknown error'))
   });
 
-  const executeTrade = (sig: ForexSignal) => {
-    if (sig.action === 'HOLD') return;
-    if (window.confirm(`Execute live ${sig.action} for ${sig.symbol} at ${sig.price}?`)) {
-      mutation.mutate({ symbol: sig.symbol, side: sig.action.toLowerCase(), price: sig.price });
+  const handleRowClick = (sig: ForexSignal) => {
+    // 1. Focus the asset
+    onAssetClick?.(sig.symbol);
+
+    // 2. Offer trade if valid signal
+    if (sig.action !== 'HOLD') {
+      if (window.confirm(`Execute live ${sig.action} for ${sig.symbol} at ${sig.price}?`)) {
+        mutation.mutate({ symbol: sig.symbol, side: sig.action.toLowerCase(), price: sig.price });
+      }
     }
   };
 
@@ -54,8 +60,10 @@ export default function ForexSignals({ signals }: Props) {
     <div style={{
       background: 'rgba(5, 11, 20, 0.4)',
       borderRadius: '20px',
-      overflow: 'hidden'
+      overflowX: 'auto',
+      WebkitOverflowScrolling: 'touch'
     }}>
+      <div style={{ minWidth: '800px' }}>
       <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr 1fr 1fr 1fr 1fr 1fr', gap: '8px', paddingBottom: '12px', borderBottom: '1px solid rgba(255,255,255,0.05)', fontSize: '10px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
         <div>Pair</div>
         <div>Score</div>
@@ -78,14 +86,14 @@ export default function ForexSignals({ signals }: Props) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              onClick={() => executeTrade(sig)}
+              onClick={() => handleRowClick(sig)}
+              whileHover={{ background: 'rgba(255,255,255,0.05)', border: `1px solid ${actionColor}44` }}
               style={{
                 display: 'grid', gridTemplateColumns: '1.2fr 0.8fr 1fr 1fr 1fr 1fr 1fr', gap: '8px', alignItems: 'center',
                 padding: '12px 14px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px',
                 border: '1px solid rgba(255,255,255,0.03)',
-                cursor: sig.action === 'HOLD' ? 'default' : 'pointer'
+                cursor: sig.action === 'HOLD' ? 'pointer' : 'pointer'
               }}
-              whileHover={sig.action === 'HOLD' ? {} : { background: 'rgba(255,255,255,0.05)', border: `1px solid ${actionColor}44` }}
             >
               {/* Asset */}
               <div>
@@ -139,6 +147,7 @@ export default function ForexSignals({ signals }: Props) {
             </motion.div>
           )
         })}
+      </div>
       </div>
     </div>
   );

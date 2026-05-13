@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { createChart, ColorType } from 'lightweight-charts';
+import { createChart, ColorType, AreaSeries } from 'lightweight-charts';
 
 interface PnLChartProps {
   data: { time: string; value: number }[];
@@ -30,7 +30,7 @@ export default function PnLChart({ data }: PnLChartProps) {
       },
     });
 
-    const lineSeries = chart.addAreaSeries({
+    const lineSeries = chart.addSeries(AreaSeries, {
       lineColor: '#d4af37',
       topColor: 'rgba(212, 175, 55, 0.2)',
       bottomColor: 'rgba(212, 175, 55, 0.0)',

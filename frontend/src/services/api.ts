@@ -44,9 +44,12 @@ export async function fetchMarketData(category: string = 'XAUUSD'): Promise<Mark
   ];
 }
 
-export async function fetchPrediction(category: string = 'XAUUSD'): Promise<Prediction> {
+export async function fetchPrediction(category: string = 'XAUUSD', symbol?: string): Promise<Prediction> {
   try {
-    const res = await fetch(`${API_BASE}/prediction?category=${category}`);
+    const url = symbol 
+      ? `${API_BASE}/prediction?category=${category}&symbol=${symbol}`
+      : `${API_BASE}/prediction?category=${category}`;
+    const res = await fetch(url);
     if (res.ok) return await res.json();
   } catch (_) { /* backend unavailable */ }
 
@@ -94,7 +97,15 @@ export async function fetchPrediction(category: string = 'XAUUSD'): Promise<Pred
   };
 }
 
-export async function fetchSMCPatterns(category: string = 'XAUUSD'): Promise<SMCPattern[]> {
+export async function fetchSMCPatterns(category: string = 'XAUUSD', symbol?: string): Promise<SMCPattern[]> {
+  try {
+    const url = symbol 
+      ? `${API_BASE}/smc?category=${category}&symbol=${symbol}`
+      : `${API_BASE}/smc?category=${category}`;
+    const res = await fetch(url);
+    if (res.ok) return await res.json();
+  } catch (_) { /* backend unavailable */ }
+
   let level = 2341.50;
   if (category === 'CRYPTO') level = 62000;
   if (category === 'FOREX') level = 1.0810;
@@ -187,6 +198,24 @@ export async function addManualPosition(symbol: string, side: string, price: num
 export async function triggerMLTraining(): Promise<any> {
     const res = await fetch(`${API_BASE}/ml/train`, {
         method: 'POST'
+    });
+    return await res.json();
+}
+
+export async function registerUser(data: any): Promise<any> {
+    const res = await fetch(`${API_BASE.replace('/api', '')}/api/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+    });
+    return await res.json();
+}
+
+export async function loginUser(data: any): Promise<any> {
+    const res = await fetch(`${API_BASE.replace('/api', '')}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
     });
     return await res.json();
 }

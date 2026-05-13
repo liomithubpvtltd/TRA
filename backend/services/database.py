@@ -42,6 +42,16 @@ class TradeLog(Base):
     details = Column(String(255))
     timestamp = Column(DateTime)
 
+class User(Base):
+    __tablename__ = 'users'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String(100))
+    email = Column(String(100), unique=True)
+    phone = Column(String(20))
+    password = Column(String(255)) # In real app, hash this!
+    role = Column(String(20), default='user') # admin/user
+    created_at = Column(DateTime, default=pd.Timestamp.now)
+
 class DatabaseService:
     def __init__(self):
         # Use SQLite for out-of-the-box local persistence
