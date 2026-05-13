@@ -6,6 +6,7 @@ import {
   fetchPrediction, fetchSMCPatterns, fetchCryptoAssets, 
   fetchForexAssets, fetchPortfolio 
 } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 import AssetDetailsModal from '../components/AssetDetailsModal';
 import Header from '../components/Header';
@@ -16,7 +17,6 @@ import EconomicCalendar from '../components/EconomicCalendar';
 import Recommendations from '../components/Recommendations';
 import CryptoSignals from '../components/CryptoSignals';
 import ForexSignals from '../components/ForexSignals';
-import MLTrainingEngine from '../components/MLTrainingEngine';
 import CryptoTicker from '../components/CryptoTicker';
 import GlassCard from '../components/GlassCard';
 import RallyCapture from '../components/RallyCapture';
@@ -40,11 +40,22 @@ export default function Dashboard() {
   const [focusedSymbol, setFocusedSymbol] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
+  const { user, refreshUser } = useAuth();
+
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
     window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
+    
+    // Periodically refresh user data (balance, etc)
+    const interval = setInterval(() => {
+      refreshUser();
+    }, 30000); // every 30s
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      clearInterval(interval);
+    };
+  }, [refreshUser]);
 
   // Clear focused symbol when switching major categories
   React.useEffect(() => {
@@ -63,7 +74,12 @@ export default function Dashboard() {
   const { data: news       } = useQuery({ queryKey: ['news'],       queryFn: fetchNews,          refetchInterval: 60000 });
   const { data: crypto     } = useQuery({ queryKey: ['crypto'],     queryFn: fetchCryptoAssets,  refetchInterval: 15000 });
   const { data: forex      } = useQuery({ queryKey: ['forex'],      queryFn: fetchForexAssets,   refetchInterval: 15000 });
-  const { data: portfolio  } = useQuery({ queryKey: ['portfolio'],  queryFn: fetchPortfolio,     refetchInterval: REFETCH_INTERVAL });
+  const { data: portfolio  } = useQuery({ 
+    queryKey: ['portfolio', user?.email],  
+    queryFn: () => fetchPortfolio(user?.email),     
+    refetchInterval: REFETCH_INTERVAL,
+    enabled: !!user?.email
+  });
 
   const now = new Intl.DateTimeFormat(undefined, {
     hour: '2-digit', minute: '2-digit', second: '2-digit',
@@ -206,8 +222,6 @@ export default function Dashboard() {
           )}
 
 
-          {/* ML Auto-training Widget */}
-          <MLTrainingEngine />
 
         </div>
       </div>

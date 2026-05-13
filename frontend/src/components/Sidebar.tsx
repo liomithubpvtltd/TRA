@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
-import { LayoutDashboard, Briefcase, ClipboardList, FileText, Calculator, User, Bell, ChevronRight, X, ShieldCheck } from 'lucide-react';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { LayoutDashboard, Briefcase, ClipboardList, FileText, Calculator, User, Bell, ChevronRight, X, ShieldCheck, Cpu, LogOut } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [hovered, setHovered] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const { user, logout } = useAuth();
 
   const menuItems = [
@@ -17,10 +19,15 @@ export default function Sidebar() {
     { name: 'Reports',     icon: <FileText size={20} />,        path: '/reports' },
     { name: 'Calculators', icon: <Calculator size={20} />,      path: '/calculators' },
     { name: 'Admin',       icon: <ShieldCheck size={20} />,     path: '/admin',      adminOnly: true },
+    { name: 'AI Matrix',   icon: <Cpu size={20} />,     path: '/model-engine', restricted: true },
     { name: 'Profile',     icon: <User size={20} />,            path: '/profile' },
   ];
 
-  const visibleItems = menuItems.filter(item => !item.adminOnly || user?.role === 'admin');
+  const visibleItems = menuItems.filter(item => {
+    if (item.adminOnly) return user?.role === 'admin';
+    if (item.restricted) return user?.email === 'admin@mayankmeraiya.com';
+    return true;
+  });
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
@@ -48,13 +55,24 @@ export default function Sidebar() {
           </div>
           
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Bell size={20} color="#64748b" />
-            <div style={{
-              width: 32, height: 32, borderRadius: '10px',
-              background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: '12px', fontWeight: 700, color: '#d4af37', border: '1px solid rgba(212,175,55,0.2)'
-            }}>MM</div>
+            <div 
+              onClick={() => alert("Notification Center coming soon — All ML signals are active.")}
+              style={{ cursor: 'pointer', padding: '6px' }}
+            >
+              <Bell size={20} color="#64748b" />
+            </div>
+            <div 
+              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+              style={{
+                width: 32, height: 32, borderRadius: '10px',
+                background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: '12px', fontWeight: 700, color: '#d4af37', border: '1px solid rgba(212,175,55,0.2)',
+                cursor: 'pointer', position: 'relative'
+              }}
+            >
+              {user?.name ? user.name.substring(0, 2).toUpperCase() : 'MM'}
+            </div>
           </div>
         </div>
 
@@ -90,6 +108,30 @@ export default function Sidebar() {
             );
           })}
         </nav>
+        {/* Dropdown Menu */}
+        {isDropdownOpen && (
+          <div style={{
+            position: 'fixed', top: '70px', right: '20px', width: '200px',
+            background: 'rgba(10, 18, 35, 0.95)', backdropFilter: 'blur(16px)',
+            border: '1px solid rgba(255,255,255,0.1)', borderRadius: '16px',
+            zIndex: 1001, padding: '8px', boxShadow: '0 10px 40px rgba(0,0,0,0.5)',
+            transformOrigin: 'top right'
+          }}>
+             <div 
+               onClick={() => { navigate('/profile'); setIsDropdownOpen(false); }}
+               style={{ padding: '12px 16px', color: '#f8fafc', fontSize: '14px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+             >
+                <User size={16} color="#d4af37" /> Profile
+             </div>
+             <div style={{ height: '1px', background: 'rgba(255,255,255,0.05)', margin: '4px 0' }} />
+             <div 
+               onClick={() => { logout(); setIsDropdownOpen(false); }}
+               style={{ padding: '12px 16px', color: '#ef4444', fontSize: '14px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}
+             >
+                <LogOut size={16} /> Logout
+             </div>
+          </div>
+        )}
       </>
     );
   }
@@ -191,6 +233,12 @@ export default function Sidebar() {
             <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
               {user?.role === 'admin' ? 'ADMINISTRATOR' : 'VIP TRADER'}
             </div>
+            {(user?.balance !== undefined) && (
+              <div style={{ fontSize: '10px', color: '#d4af37', fontWeight: 900, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#d4af37' }} />
+                CAPITAL: ${user.balance.toLocaleString()}
+              </div>
+            )}
           </div>
           <div 
             onClick={() => logout()}

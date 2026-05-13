@@ -2,11 +2,15 @@ import React, { useState, useEffect } from 'react';
 import GlassCard from '../components/GlassCard';
 import { Users, CheckCircle, XCircle, DollarSign, ShieldAlert, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { fetchAdminUsers } from '../services/api';
+import { fetchAdminUsers, updateUserBalance } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import Header from '../components/Header';
 
 export default function Admin() {
   const [users, setUsers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeCategory, setActiveCategory] = useState<'XAUUSD' | 'CRYPTO' | 'FOREX'>('XAUUSD');
+  const { user: currentUser, refreshUser } = useAuth();
 
   useEffect(() => {
     fetchAdminUsers().then(data => {
@@ -18,18 +22,35 @@ export default function Admin() {
     setUsers(users.map(u => u.id === id ? { ...u, status: action } : u));
   };
 
-  const addFunds = (id: number) => {
+  const addFunds = async (id: number) => {
     const amount = window.prompt("Enter amount to add to wallet:");
     if (amount && !isNaN(Number(amount))) {
-      setUsers(users.map(u => u.id === id ? { ...u, balance: u.balance + Number(amount) } : u));
+      const val = Number(amount);
+      const res = await updateUserBalance(id, val);
+      if (res.status === 'Success') {
+        setUsers(users.map(u => u.id === id ? { ...u, balance: res.balance } : u));
+        // If the admin added funds TO THEMSELVES, refresh the global auth state immediately
+        const targetUser = users.find(u => u.id === id);
+        if (targetUser && currentUser && targetUser.email === currentUser.email) {
+          refreshUser();
+        }
+      } else {
+        alert("Error updating balance: " + res.message);
+      }
     }
   };
 
   return (
-    <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '16px 24px 80px' }}>
-      <header style={{ marginBottom: '32px' }}>
+    <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '0 24px 80px' }}>
+      <Header 
+        lastUpdated={new Date().toLocaleTimeString()} 
+        activeCategory={activeCategory}
+        setActiveCategory={setActiveCategory}
+      />
+      
+      <header style={{ margin: '40px 0 32px' }}>
         <h1 style={{ fontSize: '32px', fontWeight: 800, color: '#f8fafc', margin: 0 }}>Institutional Control</h1>
-        <p style={{ color: '#64748b', margin: '4px 0 0' }}>Manage user access and capital allocations</p>
+        <p style={{ color: '#64748b', margin: '4px 0 0' }}>Manage user access and capital allocations across the cluster.</p>
       </header>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '32px' }}>

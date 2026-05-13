@@ -1,97 +1,123 @@
 import time
 import threading
 from datetime import datetime
-from services.database import db_service, Position, TradeLog
+import requests
+from services.database import db_service, Position, TradeLog, StrategyBenchmark, User
+from services.forensic_service import forensic_engine
 
 class PaperTrader:
     def __init__(self, backend_url="http://localhost:8001"):
         self.backend_url = backend_url
-        self.auto_trade_enabled = True
-        self.confidence_threshold = 70.0 # Only auto-trade above 70% confidence
+        self.confidence_threshold = 80.0
         self.running = False
         self.thread = None
+        self.execution_pause = 60 # 1 minute cycles for real-time rally capture
 
     def start(self):
         if not self.running:
             self.running = True
-            self.thread = threading.Thread(target=self._monitor_loop, daemon=True)
+            self.thread = threading.Thread(target=self._autonomous_cycle, daemon=True)
             self.thread.start()
-            print("[PaperTrader] Auto-Trader monitoring started.")
+            print("[PaperTrader] Institutional Auto-Execution started.")
 
     def stop(self):
         self.running = False
 
-    def _monitor_loop(self):
-        import requests
+    def _autonomous_cycle(self):
         while self.running:
             try:
-                # Fetch live prediction from local API
-                response = requests.get(f"{self.backend_url}/api/prediction")
-                if response.status_code == 200:
-                    pred = response.json()
-                    self._process_prediction(pred)
+                # 1. Fetch multi-asset predictions (Gold, Crypto, Forex)
+                # For now we use the main /api/prediction which covers XAUUSD
+                # We can extend this to hit specific asset predictors
+                res = requests.get(f"{self.backend_url}/api/prediction")
+                if res.status_code == 200:
+                    pred = res.json()
+                    self._process_signal('XAUUSD', pred)
+
+                # TODO: Add Crypto/Forex signal fetching if different endpoints exist
+                # time.sleep(self.execution_pause)
             except Exception as e:
-                print(f"[PaperTrader] Sync Error: {e}")
+                print(f"[PaperTrader] Cycle Error: {e}")
             
-            time.sleep(300) # Check every 5 minutes
+            time.sleep(self.execution_pause)
 
-    def _process_prediction(self, pred):
-        buy_p = pred.get('buy_probability', 0)
-        sell_p = pred.get('sell_probability', 0)
+    def _process_signal(self, symbol, signal):
+        buy_p = signal.get('buy_probability', 0)
+        sell_p = signal.get('sell_probability', 0)
+        price = signal.get('current_price', 0)
         
-        # Simple Logic: If confidence is high, and no open position, trade.
-        if buy_p > self.confidence_threshold:
-            self._execute_trade('buy', pred, confidence=buy_p)
-        elif sell_p > self.confidence_threshold:
-            self._execute_trade('sell', pred, confidence=sell_p)
+        if price == 0: return
 
-    def _execute_trade(self, side, pred, confidence=0):
+        # Dynamic Threshold Adjustment based on Edge Strategy integration
         session = db_service.Session()
         try:
-            # Check if we already have an open position for XAUUSD (symbol handled by prediction)
-            existing = session.query(Position).filter_by(symbol='XAUUSD', status='open').first()
-            if existing:
-                # If existing is same side, do nothing. If opposite, maybe flip? 
-                # For simplicity: just one trade at a time.
-                return
-            
-            # Fetch current price (using gold price from our market-data logic)
-            # In a real scenario we'd fetch live price again
-            import requests
-            m_res = requests.get(f"{self.backend_url}/api/market-data")
-            current_price = 0
-            if m_res.status_code == 200:
-                data = m_res.json()
-                for item in data:
-                    if item['symbol'] == 'XAU/USD':
-                        current_price = item['price']
-            
-            if current_price == 0: return
+            integrated = session.query(StrategyBenchmark).filter_by(status='INTEGRATED').count()
+            threshold = self.confidence_threshold - (5.0 if integrated > 0 else 0)
 
+            if buy_p >= threshold:
+                self._execute_autonomous_trade('BUY', symbol, price, buy_p)
+            elif sell_p >= threshold:
+                self._execute_autonomous_trade('SELL', symbol, price, sell_p)
+        finally:
+            session.close()
+
+    def _execute_autonomous_trade(self, side, symbol, price, confidence):
+        session = db_service.Session()
+        try:
+            # 1. Verification: Account Balance (Support for "if wallet me fund he toh")
+            # Usually we use the admin user for global paper trading or the first user
+            admin = session.query(User).filter_by(role='admin').first()
+            if not admin or admin.balance < 100: # Minimum $100 for paper trading simulation
+                print(f"[PaperTrader] Execution Prevented: Insufficient Balance (${admin.balance if admin else 0})")
+                return
+
+            # 2. Check for duplicate positions
+            existing = session.query(Position).filter_by(symbol=symbol, status='open').first()
+            if existing:
+                return
+
+            # 3. Governance: Forensic attribution
+            governance_report = forensic_engine.analyze_prediction_quality({
+                'symbol': symbol,
+                'confidence': confidence,
+                'side': side,
+                'price': price
+            })
+
+            # 4. Create Position
+            lot_size = 1.0 # Institutional default
             new_pos = Position(
-                symbol='XAUUSD',
+                symbol=symbol,
                 side=side,
-                entry_price=current_price,
-                size=1.0, # 1 lot default
+                entry_price=price,
+                quantity=lot_size,
+                status='open',
                 timestamp=datetime.now(),
-                status='open'
+                user_email=admin.email
             )
             session.add(new_pos)
-            
-            # Log the trade
+
+            # 5. Deduct Balance (Paper Simulation)
+            # In a real broker this happens automatically, here we track it
+            # admin.balance -= (price * lot_size * 0.01) # Margin simulation
+
+            # 6. Log Trade
             log = TradeLog(
-                symbol='XAUUSD',
-                action='trade_opened',
-                price=current_price,
-                details=f"Auto-executed {side} at {confidence}% confidence",
-                timestamp=datetime.now()
+                symbol=symbol,
+                action=f'AUTO_{side}',
+                price=price,
+                quantity=lot_size,
+                details=f"Autonomous Breakout Capture | Confidence: {confidence}% | Forensic Note: {governance_report}",
+                timestamp=datetime.now(),
+                user_email=admin.email
             )
             session.add(log)
             session.commit()
-            print(f"[PaperTrader] Auto-Executed {side.upper()} @ {current_price}")
+            print(f"[PaperTrader] Successfully Auto-Executed {side} {symbol} @ {price}")
+
         except Exception as e:
             session.rollback()
-            print(f"[PaperTrader] Trade Error: {e}")
+            print(f"[PaperTrader] Execution Error: {e}")
         finally:
             session.close()
 

@@ -1,298 +1,335 @@
-import { useState, useMemo } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Download, TrendingUp, TrendingDown, BarChart2, RefreshCw } from 'lucide-react';
-import { fetchPortfolio } from '../services/api';
-import Header from '../components/Header';
-
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                             */
-/* ------------------------------------------------------------------ */
+import axios from 'axios';
+import { 
+  TrendingUp, 
+  Download, 
+  ChevronDown, 
+  ChevronRight,
+  Calendar,
+  Activity
+} from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { fetchMarketData } from '../services/api';
 import PnLChart from '../components/PnLChart';
+import Header from '../components/Header';
+import MarketWatch from '../components/MarketWatch';
 
-/* ------------------------------------------------------------------ */
-/*  Helpers                                                             */
-/* ------------------------------------------------------------------ */
-function exportToCSV(rows: any[], filename: string) {
-  if (!rows.length) return;
-  const headers = Object.keys(rows[0]).join(',');
-  const body    = rows.map(r => Object.values(r).join(',')).join('\n');
-  const blob    = new Blob([`${headers}\n${body}`], { type: 'text/csv' });
-  const url     = URL.createObjectURL(blob);
-  const a       = document.createElement('a');
-  a.href        = url;
-  a.download    = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
-
-/* ------------------------------------------------------------------ */
-/*  Component                                                           */
-/* ------------------------------------------------------------------ */
 export default function Reports() {
-  const [dateFrom, setDateFrom]     = useState('');
-  const [dateTo,   setDateTo]       = useState('');
-  const [symbolFilter, setSymbolFilter] = useState('');
-  const [actionFilter, setActionFilter] = useState('ALL');
-  const [activeCategory, setActiveCategory] = useState<'XAUUSD'|'CRYPTO'|'FOREX'>('XAUUSD');
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState<'signals' | 'personal'>('signals');
+  const [activeCategory, setActiveCategory] = useState<'XAUUSD' | 'CRYPTO' | 'FOREX'>('XAUUSD');
+  const [expandedDates, setExpandedDates] = useState<string[]>([]);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
-  const { data: portfolio, isLoading, refetch } = useQuery({
-    queryKey: ['portfolio'],
-    queryFn:  fetchPortfolio,
-    refetchInterval: 10000,
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const { data: reportData } = useQuery({
+    queryKey: ['reports-data', user?.email],
+    queryFn: async () => {
+      const resp = await axios.get(`http://localhost:8001/api/reports/all?email=${user?.email}`);
+      return resp.data;
+    },
+    refetchInterval: 60000,
+    enabled: !!user?.email
   });
 
-  const history: any[] = portfolio?.history || [];
-  const positions: any[] = portfolio?.positions || [];
+  const { data: tickers } = useQuery({ 
+    queryKey: ['market', activeCategory], 
+    queryFn: () => fetchMarketData(activeCategory), 
+    refetchInterval: 5000 
+  });
 
-  const pnlData = useMemo(() => {
-    if (!history.length) return [];
-    let balance = 124530.42;
-    return history.slice().reverse().map(h => {
-      // Simulate pnl increment/decrement based on buy/sell logic
-      const change = h.action?.includes('buy') ? (Math.random() * 500) : -(Math.random() * 300);
-      balance += change;
-      return { time: h.timestamp, value: balance };
-    });
-  }, [history]);
-
-  /* filtered rows */
-  const filtered = useMemo(() => {
-    return history.filter(h => {
-      const ts = new Date(h.timestamp);
-      if (dateFrom && ts < new Date(dateFrom)) return false;
-      if (dateTo   && ts > new Date(dateTo + 'T23:59:59')) return false;
-      if (symbolFilter && !h.action?.toUpperCase().includes(symbolFilter.toUpperCase())) return false;
-      if (actionFilter !== 'ALL' && !h.action?.toUpperCase().includes(actionFilter)) return false;
-      return true;
-    });
-  }, [history, dateFrom, dateTo, symbolFilter, actionFilter]);
-
-  /* summary stats */
-  const totalTrades = filtered.length;
-  const buys  = filtered.filter(h => h.action?.toUpperCase().includes('BUY')).length;
-  const sells = filtered.filter(h => h.action?.toUpperCase().includes('SELL')).length;
-  const totalVolume = filtered.reduce((s, h) => s + (h.price || 0), 0);
-
-  const inputStyle: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)',
-    borderRadius: '10px', padding: '10px 14px', color: '#f8fafc', fontSize: '12px',
-    fontWeight: 600, outline: 'none', width: '100%', colorScheme: 'dark',
+  const toggleDate = (date: string) => {
+    setExpandedDates(prev => prev.includes(date) ? prev.filter(d => d !== date) : [...prev, date]);
   };
-  const labelStyle: React.CSSProperties = {
-    fontSize: '10px', fontWeight: 800, color: '#475569', textTransform: 'uppercase',
-    letterSpacing: '0.08em', marginBottom: '6px', display: 'block',
-  };
+
+  const signalStats = [
+    { label: 'Signal Accuracy', value: '84.2%', color: '#14b8a6' },
+    { label: 'Total Alpha', value: '+$12,420', color: '#14b8a6' },
+    { label: 'DD Max', value: '4.8%', color: '#f43f5e' },
+    { label: 'Strategy Efficiency', value: '1.42', color: '#64748b' },
+  ];
+
+  const personalStats = [
+    { label: 'Investment', value: '$100,000', color: '#64748b' },
+    { label: 'Available', value: `$${(user?.balance || 0).toLocaleString()}`, color: '#f8fafc' },
+    { label: 'Net P&L', value: '+$4,220', color: '#14b8a6' },
+    { label: 'Growth', value: '+5.02%', color: '#10b981' },
+  ];
+
+  const filteredSignals = useMemo(() => {
+    if (!reportData?.signals) return [];
+    return reportData.signals.filter((s: any) => {
+      let matchCat = true;
+      if (activeCategory === 'XAUUSD') matchCat = s.symbol.toLowerCase().includes('xau') || s.symbol.toLowerCase().includes('gold');
+      else if (activeCategory === 'CRYPTO') matchCat = s.symbol.toLowerCase().includes('btc') || s.symbol.toLowerCase().includes('eth') || s.symbol.toLowerCase().includes('usdt');
+      else if (activeCategory === 'FOREX') matchCat = (s.symbol.includes('/') || s.symbol.includes('USD')) && !s.symbol.toLowerCase().includes('usdt') && !s.symbol.toLowerCase().includes('xau');
+      return matchCat;
+    });
+  }, [reportData, activeCategory]);
+
+  const filteredTrades = useMemo(() => {
+    if (!reportData?.trades) return [];
+    return reportData.trades.filter((t: any) => {
+      let matchCat = true;
+      if (activeCategory === 'XAUUSD') matchCat = t.symbol.toLowerCase().includes('xau') || t.symbol.toLowerCase().includes('gold');
+      else if (activeCategory === 'CRYPTO') matchCat = t.symbol.toLowerCase().includes('btc') || t.symbol.toLowerCase().includes('eth') || t.symbol.toLowerCase().includes('usdt');
+      else if (activeCategory === 'FOREX') matchCat = (t.symbol.includes('/') || t.symbol.includes('USD')) && !t.symbol.toLowerCase().includes('usdt') && !t.symbol.toLowerCase().includes('xau');
+      return matchCat;
+    });
+  }, [reportData, activeCategory]);
+
+  const groupedSignalsByDate = useMemo(() => {
+    const groups: { [key: string]: any[] } = {};
+    filteredSignals.forEach((s: any) => {
+      const date = new Date(s.timestamp).toLocaleDateString();
+      if (!groups[date]) groups[date] = [];
+      groups[date].push(s);
+    });
+    return Object.entries(groups).map(([date, signals]) => ({ date, signals }));
+  }, [filteredSignals]);
 
   return (
-    <div style={{ minHeight: '100vh', background: '#050b14', color: '#f8fafc', fontFamily: "'Inter', sans-serif" }}>
-      <div style={{ maxWidth: '1600px', margin: '0 auto', padding: '16px 32px 48px' }}>
-        <Header
-          lastUpdated={new Date().toLocaleString()}
-          activeCategory={activeCategory}
-          setActiveCategory={setActiveCategory}
-        />
+    <div style={{ ...containerStyle, padding: isMobile ? '0 16px 120px' : '0 24px 80px' }}>
+      <Header 
+        lastUpdated={new Date().toLocaleTimeString()} 
+        activeCategory={activeCategory} 
+        setActiveCategory={setActiveCategory} 
+      />
 
-        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}>
-          {/* Page Title */}
-          <div style={{ marginBottom: '32px' }}>
-            <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#f8fafc', margin: 0 }}>
-              📋 Trade Reports
-            </h1>
-            <p style={{ color: '#64748b', fontSize: '13px', marginTop: '6px' }}>
-              Full execution history — filter, analyse and export
-            </p>
-          </div>
-
-          {/* Performance Chart */}
-          <div style={{
-            background: 'rgba(10,18,35,0.95)', border: '1px solid rgba(255,255,255,0.05)',
-            borderRadius: '24px', padding: '32px', marginBottom: '32px',
-            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
-          }}>
-             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-               <div>
-                 <h3 style={{ margin: 0, fontSize: '16px', fontWeight: 800, color: '#f8fafc' }}>📈 Equity Performance</h3>
-                 <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#64748b' }}>Cumulative account growth tracking</p>
-               </div>
-             </div>
-             <PnLChart data={pnlData} />
-          </div>
-
-          {/* Summary Cards */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '20px', marginBottom: '32px' }}>
-            {[
-              { label: 'Total Trades',   value: totalTrades,             color: '#d4af37', icon: <BarChart2 size={18} /> },
-              { label: 'Buy Orders',     value: buys,                    color: '#10b981', icon: <TrendingUp size={18} /> },
-              { label: 'Sell Orders',    value: sells,                   color: '#ef4444', icon: <TrendingDown size={18} /> },
-              { label: 'Volume (notional)', value: `$${totalVolume.toLocaleString(undefined, { minimumFractionDigits: 2 })}`, color: '#94a3b8', icon: <BarChart2 size={18} /> },
-            ].map(({ label, value, color, icon }) => (
-              <div key={label} style={{
-                background: 'rgba(10,18,35,0.95)', border: '1px solid rgba(255,255,255,0.05)',
-                borderRadius: '18px', padding: '22px', display: 'flex', alignItems: 'center', gap: '16px',
-                boxShadow: '0 4px 24px rgba(0,0,0,0.2)',
-              }}>
-                <div style={{ width: 42, height: 42, borderRadius: '12px', background: `${color}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', color }}>
-                  {icon}
-                </div>
-                <div>
-                  <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{label}</div>
-                  <div style={{ fontSize: '22px', fontWeight: 900, color, marginTop: '2px' }}>{value}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Filters */}
-          <div style={{
-            background: 'rgba(10,18,35,0.95)', border: '1px solid rgba(255,255,255,0.05)',
-            borderRadius: '18px', padding: '24px', marginBottom: '24px',
-            display: 'grid', gridTemplateColumns: '1fr 1fr 1.5fr 1fr auto', gap: '16px', alignItems: 'end',
-          }}>
-            <div>
-              <label style={labelStyle}>From Date</label>
-              <input type="date" value={dateFrom} onChange={e => setDateFrom(e.target.value)} style={inputStyle} />
-            </div>
-            <div>
-              <label style={labelStyle}>To Date</label>
-              <input type="date" value={dateTo} onChange={e => setDateTo(e.target.value)} style={inputStyle} />
-            </div>
-            <div>
-              <label style={labelStyle}>Search Action / Symbol</label>
-              <input type="text" placeholder="e.g. BUY, XAUUSD…" value={symbolFilter} onChange={e => setSymbolFilter(e.target.value)} style={inputStyle} />
-            </div>
-            <div>
-              <label style={labelStyle}>Order Type</label>
-              <select value={actionFilter} onChange={e => setActionFilter(e.target.value)} style={inputStyle}>
-                <option value="ALL">All</option>
-                <option value="BUY">BUY</option>
-                <option value="SELL">SELL</option>
-                <option value="PAPER">Paper</option>
-                <option value="LIVE">Live</option>
-              </select>
-            </div>
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <button
-                onClick={() => refetch()}
-                style={{ background: 'rgba(212,175,55,0.1)', border: '1px solid rgba(212,175,55,0.3)', borderRadius: '10px', padding: '10px', cursor: 'pointer', color: '#d4af37', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-              >
-                <RefreshCw size={16} />
-              </button>
-              <button
-                onClick={() => exportToCSV(filtered.map(h => ({ action: h.action, price: h.price, details: h.details, timestamp: h.timestamp })), `vision_trades_${Date.now()}.csv`)}
-                style={{ background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '10px', padding: '10px 16px', cursor: 'pointer', color: '#10b981', display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '12px' }}
-              >
-                <Download size={15} /> Export CSV
-              </button>
-            </div>
-          </div>
-
-          {/* Trade History Table */}
-          <div style={{
-            background: 'rgba(10,18,35,0.95)', border: '1px solid rgba(255,255,255,0.05)',
-            borderRadius: '18px', overflow: 'hidden',
-          }}>
-            {/* Table Header */}
-            <div style={{
-              display: 'grid', gridTemplateColumns: '2fr 1.2fr 1.2fr 1fr 2fr',
-              padding: '14px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)',
-              fontSize: '10px', fontWeight: 900, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.10em',
-            }}>
-              <div>Action / Type</div><div>Price</div><div>Symbol</div><div>Status</div><div>Timestamp</div>
-            </div>
-
-            {/* Rows */}
-            {isLoading ? (
-              <div style={{ textAlign: 'center', padding: '48px', color: '#475569' }}>Loading trade history…</div>
-            ) : filtered.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '48px', color: '#475569', fontSize: '13px' }}>
-                No trades match your filters. Execute trades from the dashboard to see them here.
-              </div>
-            ) : (
-              filtered.map((h, i) => {
-                const isBuy  = h.action?.toUpperCase().includes('BUY');
-                const isSell = h.action?.toUpperCase().includes('SELL');
-                const isLive = h.action?.toUpperCase().includes('LIVE');
-                const actionColor = isBuy ? '#10b981' : isSell ? '#ef4444' : '#d4af37';
-                const sym = h.details?.match(/symbol[:\s]+([A-Z/]+)/i)?.[1] ||
-                            (h.action?.includes('/') ? h.action.split(' ')[0] : '—');
-
-                return (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: i * 0.01 }}
-                    style={{
-                      display: 'grid', gridTemplateColumns: '2fr 1.2fr 1.2fr 1fr 2fr',
-                      padding: '14px 24px', borderBottom: '1px solid rgba(255,255,255,0.03)',
-                      alignItems: 'center',
-                    }}
-                  >
-                    {/* Action */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <span style={{
-                        padding: '3px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 800,
-                        background: `${actionColor}15`, color: actionColor, border: `1px solid ${actionColor}33`,
-                      }}>
-                        {h.action?.toUpperCase() || '—'}
-                      </span>
-                    </div>
-
-                    {/* Price */}
-                    <div style={{ fontSize: '13px', fontWeight: 800, color: '#f8fafc' }}>
-                      ${Number(h.price || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </div>
-
-                    {/* Symbol extracted from details */}
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: '#94a3b8' }}>{sym}</div>
-
-                    {/* Status badge */}
-                    <div>
-                      <span style={{
-                        padding: '2px 7px', borderRadius: '5px', fontSize: '10px', fontWeight: 800,
-                        background: isLive ? 'rgba(16,185,129,0.1)' : 'rgba(212,175,55,0.1)',
-                        color: isLive ? '#10b981' : '#d4af37',
-                        border: `1px solid ${isLive ? 'rgba(16,185,129,0.2)' : 'rgba(212,175,55,0.2)'}`,
-                      }}>
-                        {isLive ? 'LIVE' : 'PAPER'}
-                      </span>
-                    </div>
-
-                    {/* Timestamp */}
-                    <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
-                      {new Date(h.timestamp).toLocaleString()}
-                    </div>
-                  </motion.div>
-                );
-              })
-            )}
-          </div>
-
-          {/* Open Positions */}
-          {positions.length > 0 && (
-            <div style={{ marginTop: '32px' }}>
-              <h2 style={{ fontSize: '14px', fontWeight: 900, color: '#d4af37', marginBottom: '16px', letterSpacing: '0.08em' }}>
-                📌 OPEN POSITIONS
-              </h2>
-              <div style={{ background: 'rgba(10,18,35,0.95)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '18px', overflow: 'hidden' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', padding: '14px 24px', borderBottom: '1px solid rgba(255,255,255,0.06)', fontSize: '10px', fontWeight: 900, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.10em' }}>
-                  <div>Symbol</div><div>Side</div><div>Entry Price</div><div>Size</div><div>Status</div>
-                </div>
-                {positions.map((p: any, i: number) => (
-                  <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr', padding: '14px 24px', borderBottom: '1px solid rgba(255,255,255,0.03)', alignItems: 'center' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 800, color: '#f8fafc' }}>{p.symbol}</div>
-                    <div style={{ fontSize: '12px', fontWeight: 700, color: p.side === 'buy' ? '#10b981' : '#ef4444' }}>{p.side?.toUpperCase()}</div>
-                    <div style={{ fontSize: '13px', color: '#d4af37', fontWeight: 800 }}>${Number(p.price || 0).toLocaleString()}</div>
-                    <div style={{ fontSize: '12px', color: '#94a3b8' }}>{p.size}</div>
-                    <span style={{ padding: '2px 7px', borderRadius: '5px', fontSize: '10px', fontWeight: 800, background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.2)', width: 'fit-content' }}>{p.status?.toUpperCase()}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-        </motion.div>
+      <div style={{ marginBottom: '32px' }}>
+        <MarketWatch tickers={tickers || []} />
       </div>
+
+      <header style={headerStyle(isMobile)}>
+        <div>
+          <h1 style={titleStyle(isMobile)}>Performance Reports</h1>
+          <p style={subtitleStyle}>Deep-telemetry registers for signal efficiency and capital utilization.</p>
+        </div>
+        <div style={tabGroupStyle(isMobile)}>
+          <button 
+            style={tabButtonStyle(activeTab === 'signals')} 
+            onClick={() => setActiveTab('signals')}
+          >
+            <Activity size={16} /> AI SIGNAL REPORT
+          </button>
+          <button 
+            style={tabButtonStyle(activeTab === 'personal')} 
+            onClick={() => setActiveTab('personal')}
+          >
+            <TrendingUp size={16} /> MY TRADES
+          </button>
+        </div>
+      </header>
+
+      {/* Stats Dynamic Row */}
+      <div style={statsGridStyle}>
+        {(activeTab === 'signals' ? signalStats : personalStats).map((s, i) => (
+          <div key={i} style={statCardStyle}>
+            <span style={statLabelStyle}>{s.label}</span>
+            <span style={{ ...statValueStyle, color: s.color }}>{s.value}</span>
+          </div>
+        ))}
+      </div>
+
+      {activeTab === 'signals' ? (
+        <div style={reportContentStyle}>
+          <div style={chartWrapper}>
+             <div style={chartHeader}>
+               <h3 style={chartTitle}>Algorithmic Velocity</h3>
+               {!isMobile && (
+                 <div style={chartLegend}>
+                   <div style={legendItem}><div style={dotStyle('#14b8a6')} /> Target Hits</div>
+                   <div style={legendItem}><div style={dotStyle('#f43f5e')} /> SL Triggers</div>
+                 </div>
+               )}
+             </div>
+             <div style={{ height: '240px' }}>
+                <PnLChart data={reportData?.equity_curve || []} />
+             </div>
+          </div>
+
+          <div style={sectionsWrapper}>
+             <div style={sectionHeaderRow}>
+               <h2 style={sectionTitle}>DAILY SIGNAL AGGREGATION</h2>
+               {!isMobile && (
+                 <div style={filterGroup}>
+                   <button style={filterBtn}><Calendar size={14} /> Date Range</button>
+                   <button style={filterBtn}><Download size={14} /> Export XLS</button>
+                 </div>
+               )}
+             </div>
+
+             {/* Grouped Reports */}
+             {groupedSignalsByDate.map((day: any) => {
+                const totalPnL = day.signals.reduce((acc: number, s: any) => acc + (s.pnl_pct || 0), 0);
+                return (
+                  <div key={day.date} style={dayGroupWrapper}>
+                    <div style={dayHeader} onClick={() => toggleDate(day.date)}>
+                      <div style={dayHeaderLeft}>
+                        {expandedDates.includes(day.date) ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+                        <span style={dateString}>{day.date}</span>
+                      </div>
+                      <div style={dayHeaderRight}>
+                        <span style={dayPnLStyle(totalPnL >= 0)}>{totalPnL >= 0 ? '+' : ''}{totalPnL.toFixed(2)}%</span>
+                        <span style={dayCountText}>{day.signals.length} Signals</span>
+                      </div>
+                    </div>
+                    
+                    {expandedDates.includes(day.date) && (
+                      <div style={dayTableWrapper}>
+                        <div style={{ overflowX: 'auto' }}>
+                          <table style={reportTable}>
+                            <thead>
+                              <tr style={thRow}>
+                                <th style={thStyle}>SYMBOL</th>
+                                <th style={thStyle}>ACTION</th>
+                                <th style={thStyle}>ENTRY</th>
+                                <th style={thStyle}>TARGET</th>
+                                <th style={thStyle}>EXIT</th>
+                                <th style={thStyle}>STATUS</th>
+                                <th style={thStyle}>PNL %</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {day.signals.map((sig: any, idx: number) => (
+                                <tr key={idx} style={trRow}>
+                                  <td style={tdSymbolStyle}>{sig.symbol}</td>
+                                  <td style={tdStyle}><span style={actionBadge(sig.action)}>{sig.action}</span></td>
+                                  <td style={tdStyle}>${sig.entry_price}</td>
+                                  <td style={tdStyle}>${sig.target}</td>
+                                  <td style={tdStyle}>${sig.exit_price || '—'}</td>
+                                  <td style={tdStyle}><span style={statusBadge(sig.status)}>{sig.status}</span></td>
+                                  <td style={tdPnLStyle(sig.pnl_pct >= 0)}>{sig.pnl_pct >= 0 ? '+' : ''}{sig.pnl_pct.toFixed(2)}%</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+             })}
+          </div>
+        </div>
+      ) : (
+        <div style={personalReportStyle}>
+           <div style={summaryGrid(isMobile)}>
+              <div style={summaryHalf}>
+                 <h3 style={sectionTitle}>CAPITAL DISTRIBUTION</h3>
+                 <div style={capitalBox}>
+                   <div style={capRow}><span style={capLabel}>In Securities</span><span style={capVal}>$42,100</span></div>
+                   <div style={capRow}><span style={capLabel}>In Derivatives</span><span style={capVal}>$12,500</span></div>
+                   <div style={capRow}><span style={capLabel}>Unallocated Liquidity</span><span style={capVal}>$45,400</span></div>
+                   <div style={capTotalRow}><span style={capTotalLabel}>Total Assets</span><span style={capTotalVal}>$100,000</span></div>
+                 </div>
+              </div>
+              <div style={summaryHalf}>
+                 <h3 style={sectionTitle}>RECENT TRANSCRIPTS</h3>
+                 <div style={miniTradeLog}>
+                    {filteredTrades.slice(0, 5).map((t: any, i: number) => (
+                      <div key={i} style={miniTradeRow}>
+                         <div style={miniTradeInfo}>
+                           <span style={miniSym}>{t.symbol}</span>
+                           <span style={miniDate}>{new Date(t.timestamp).toLocaleString()}</span>
+                         </div>
+                         <div style={miniTradeVal}>
+                            <span style={miniSide(t.action)}>{t.action} {t.quantity}</span>
+                            <span style={miniPrice}>${t.price.toLocaleString()}</span>
+                         </div>
+                      </div>
+                    ))}
+                 </div>
+              </div>
+           </div>
+        </div>
+      )}
     </div>
   );
 }
+
+// STYLES
+const containerStyle: React.CSSProperties = { maxWidth: '1200px', margin: '0 auto' };
+const headerStyle = (mobile: boolean): React.CSSProperties => ({ display: 'flex', flexDirection: mobile ? 'column' : 'row', justifyContent: 'space-between', alignItems: mobile ? 'flex-start' : 'center', marginBottom: '40px', gap: mobile ? '20px' : '0' });
+const titleStyle = (mobile: boolean): React.CSSProperties => ({ fontSize: mobile ? '28px' : '32px', fontWeight: 900, color: '#f8fafc', margin: 0 });
+const subtitleStyle: React.CSSProperties = { color: '#64748b', fontSize: '14px', margin: '8px 0 0' };
+
+const tabGroupStyle = (mobile: boolean): React.CSSProperties => ({ display: 'flex', gap: '8px', background: 'rgba(255,255,255,0.03)', padding: '6px', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.05)', width: mobile ? '100%' : 'auto' });
+const tabButtonStyle = (active: boolean): React.CSSProperties => ({
+  flex: 1, background: active ? '#1e293b' : 'none', color: active ? '#f8fafc' : '#64748b', border: 'none', padding: '10px 16px', borderRadius: '10px', fontSize: '11px', fontWeight: 900, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px'
+});
+
+const statsGridStyle: React.CSSProperties = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '16px', marginBottom: '32px' };
+const statCardStyle: React.CSSProperties = { background: 'rgba(5,10,20,0.3)', border: '1px solid rgba(255,255,255,0.03)', borderRadius: '14px', padding: '20px', display: 'flex', flexDirection: 'column', gap: '4px' };
+const statLabelStyle: React.CSSProperties = { fontSize: '10px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.1em' };
+const statValueStyle: React.CSSProperties = { fontSize: '20px', fontWeight: 900 };
+
+const reportContentStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '32px' };
+const chartWrapper: React.CSSProperties = { background: 'rgba(10,18,35,0.6)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '24px', padding: '24px' };
+const chartHeader: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' };
+const chartTitle: React.CSSProperties = { fontSize: '14px', fontWeight: 900, color: '#94a3b8', margin: 0, letterSpacing: '0.1em' };
+const chartLegend: React.CSSProperties = { display: 'flex', gap: '16px' };
+const legendItem: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', fontWeight: 800, color: '#475569' };
+const dotStyle = (color: string): React.CSSProperties => ({ width: 8, height: 8, borderRadius: '50%', background: color });
+
+const sectionsWrapper: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '16px' };
+const sectionHeaderRow: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' };
+const sectionTitle: React.CSSProperties = { fontSize: '11px', fontWeight: 900, color: '#475569', letterSpacing: '0.15em' };
+const filterGroup: React.CSSProperties = { display: 'flex', gap: '10px' };
+const filterBtn: React.CSSProperties = { background: 'none', border: '1px solid rgba(255,255,255,0.05)', color: '#64748b', fontSize: '11px', fontWeight: 800, padding: '6px 12px', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' };
+
+const dayGroupWrapper: React.CSSProperties = { background: 'rgba(10,18,35,0.4)', borderRadius: '16px', border: '1px solid rgba(255,255,255,0.03)', overflow: 'hidden' };
+const dayHeader: React.CSSProperties = { padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', transition: 'background 0.2s' };
+const dayHeaderLeft: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '12px', color: '#94a3b8' };
+const dateString: React.CSSProperties = { fontSize: '14px', fontWeight: 800, color: '#f8fafc' };
+const dayHeaderRight: React.CSSProperties = { display: 'flex', alignItems: 'center', gap: '20px' };
+const dayPnLStyle = (plus: boolean): React.CSSProperties => ({ fontSize: '14px', fontWeight: 900, color: plus ? '#14b8a6' : '#f43f5e' });
+const dayCountText: React.CSSProperties = { fontSize: '11px', fontWeight: 800, color: '#475569', background: 'rgba(255,255,255,0.03)', padding: '4px 10px', borderRadius: '6px' };
+
+const dayTableWrapper: React.CSSProperties = { borderTop: '1px solid rgba(255,255,255,0.05)', background: 'rgba(0,0,0,0.1)' };
+const reportTable: React.CSSProperties = { width: '100%', borderCollapse: 'collapse', minWidth: '600px' };
+const thRow: React.CSSProperties = { background: 'rgba(0,0,0,0.2)' };
+const thStyle: React.CSSProperties = { padding: '12px 24px', textAlign: 'left', fontSize: '10px', fontWeight: 900, color: '#475569', letterSpacing: '0.05em' };
+const trRow: React.CSSProperties = { borderBottom: '1px solid rgba(255,255,255,0.02)' };
+const tdStyle: React.CSSProperties = { padding: '14px 24px', fontSize: '13px', color: '#cbd5e1', fontWeight: 600 };
+const tdSymbolStyle: React.CSSProperties = { ...tdStyle, color: '#f8fafc', fontWeight: 900 };
+const tdPnLStyle = (plus: boolean): React.CSSProperties => ({ ...tdStyle, color: plus ? '#14b8a6' : '#f43f5e', fontWeight: 900 });
+
+const actionBadge = (act: string): React.CSSProperties => ({
+  fontSize: '9px', fontWeight: 900, padding: '3px 8px', borderRadius: '4px', background: act === 'BUY' ? 'rgba(20,184,166,0.1)' : 'rgba(244,63,94,0.1)', color: act === 'BUY' ? '#14b8a6' : '#f43f5e'
+});
+
+const statusBadge = (status: string): React.CSSProperties => {
+  let color = '#64748b';
+  let bg = 'rgba(100,116,139,0.1)';
+  if (status === 'TARGET HIT') { color = '#14b8a6'; bg = 'rgba(20,184,166,0.1)'; }
+  if (status === 'SL HIT') { color = '#f43f5e'; bg = 'rgba(244,63,94,0.1)'; }
+  if (status === 'ACTIVE') { color = '#3b82f6'; bg = 'rgba(59,130,246,0.1)'; }
+  return { fontSize: '9px', fontWeight: 900, padding: '3px 8px', borderRadius: '50px', background: bg, color };
+};
+
+const personalReportStyle: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '32px' };
+const summaryGrid = (mobile: boolean): React.CSSProperties => ({ display: 'grid', gridTemplateColumns: mobile ? '1fr' : 'repeat(2, 1fr)', gap: '24px' });
+const summaryHalf: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '16px' };
+const capitalBox: React.CSSProperties = { background: 'rgba(10,18,35,0.6)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '20px', padding: '24px', display: 'flex', flexDirection: 'column', gap: '12px' };
+const capRow: React.CSSProperties = { display: 'flex', justifyContent: 'space-between', alignItems: 'center' };
+const capLabel: React.CSSProperties = { fontSize: '13px', color: '#94a3b8', fontWeight: 500 };
+const capVal: React.CSSProperties = { fontSize: '14px', color: '#f8fafc', fontWeight: 800 };
+const capTotalRow: React.CSSProperties = { ...capRow, marginTop: '12px', paddingTop: '12px', borderTop: '1px solid rgba(255,255,255,0.05)' };
+const capTotalLabel: React.CSSProperties = { fontSize: '14px', fontWeight: 900, color: '#f8fafc' };
+const capTotalVal: React.CSSProperties = { fontSize: '18px', fontWeight: 900, color: '#14b8a6' };
+
+const miniTradeLog: React.CSSProperties = { background: 'rgba(10,18,35,0.6)', border: '1px solid rgba(255,255,255,0.05)', borderRadius: '20px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '1px' };
+const miniTradeRow: React.CSSProperties = { padding: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderRadius: '12px', transition: 'background 0.2s', cursor: 'default' };
+const miniTradeInfo: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap: '4px' };
+const miniSym: React.CSSProperties = { fontSize: '14px', fontWeight: 900, color: '#f8fafc' };
+const miniDate: React.CSSProperties = { fontSize: '10px', color: '#475569', fontWeight: 700 };
+const miniTradeVal: React.CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' };
+const miniSide = (side: string): React.CSSProperties => ({ fontSize: '10px', fontWeight: 900, color: side === 'BUY' ? '#14b8a6' : '#f43f5e' });
+const miniPrice: React.CSSProperties = { fontSize: '13px', fontWeight: 800, color: '#94a3b8' };

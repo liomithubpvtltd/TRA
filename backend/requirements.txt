@@ -8,3 +8,6 @@ yfinance
 ta
 ccxt
 scipy
+passlib[bcrypt]
+bcrypt
+python-multipart

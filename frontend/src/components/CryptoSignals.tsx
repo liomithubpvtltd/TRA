@@ -139,13 +139,13 @@ export default function CryptoSignals({ assets, onAssetClick }: Props) {
 
               {/* Price */}
               <div style={{ fontSize: '12px', fontWeight: 800, color: '#f8fafc' }}>
-                ${asset.price < 1 ? asset.price.toFixed(4) : asset.price.toLocaleString()}
+                ${(asset.price || 0) < 1 ? (asset.price || 0).toFixed(4) : (asset.price || 0).toLocaleString()}
               </div>
 
               {/* S/R */}
               <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: '10px', fontWeight: 700, color: '#ef4444' }}>R: ${resistance.toLocaleString()}</div>
-                <div style={{ fontSize: '9px', fontWeight: 600, color: '#10b981', marginTop: '2px' }}>S: ${support.toLocaleString()}</div>
+                <div style={{ fontSize: '10px', fontWeight: 700, color: '#ef4444' }}>R: ${(resistance || 0).toLocaleString()}</div>
+                <div style={{ fontSize: '9px', fontWeight: 600, color: '#10b981', marginTop: '2px' }}>S: ${(support || 0).toLocaleString()}</div>
               </div>
             </motion.div>
           );

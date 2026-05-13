@@ -22,24 +22,26 @@ export default function Header({ lastUpdated, activeCategory, setActiveCategory 
       display: 'flex',
       flexDirection: isMobile ? 'column' : 'row',
       justifyContent: 'space-between',
-      alignItems: isMobile ? 'flex-start' : 'center',
-      padding: isMobile ? '70px 0 20px' : '12px 0 20px', // Extra top padding for mobile top bar
+      alignItems: 'center',
+      padding: isMobile ? '70px 0 20px' : '12px 0 20px', 
       borderBottom: '1px solid rgba(255,255,255,0.05)',
       marginBottom: '32px',
-      gap: isMobile ? '20px' : '0'
+      gap: isMobile ? '12px' : '0'
     }}>
-      {/* Logo / branding */}
-      <div style={{ width: isMobile ? '100%' : 'auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-        <div>
-           <h1 style={{ fontSize: isMobile ? '20px' : '22px', fontWeight: '900', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ color: '#d4af37' }}>VISION</span>
-              <span style={{ color: '#f8fafc', opacity: 0.9 }}>COMMAND</span>
-           </h1>
-           <p style={{ fontSize: '9px', color: '#64748b', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
-              PRECISION AT THE SPEED OF AI
-           </p>
+      {/* Logo / branding - Hidden on mobile per request */}
+      {!isMobile && (
+        <div style={{ display: 'flex', alignItems: 'center' }}>
+          <div>
+             <h1 style={{ fontSize: '22px', fontWeight: '900', letterSpacing: '-0.02em', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ color: '#d4af37' }}>VISION</span>
+                <span style={{ color: '#f8fafc', opacity: 0.9 }}>COMMAND</span>
+             </h1>
+             <p style={{ fontSize: '9px', color: '#64748b', fontWeight: 700, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+                PRECISION AT THE SPEED OF AI
+             </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Center: Category Switcher */}
       <div style={{ 

@@ -236,6 +236,7 @@ def score_crypto_assets(tickers: list) -> list:
         # 24h Range Position (Proxy for RSI / Overbought-Oversold)
         # 1.0 = at high, 0.0 = at low
         range_pos = (price - low) / (high - low + 1e-9)
+        rsi = round(range_pos * 100, 1)
         
         # Base score starts neutral
         base_score = 50.0
@@ -265,18 +266,44 @@ def score_crypto_assets(tickers: list) -> list:
         signal = 'BUY' if is_buy_signal else 'SELL' if is_sell_signal else 'HOLD'
         rally_probability = round(random.uniform(70, 95), 1) if is_buy_signal else round(random.uniform(5, 30), 1) if is_sell_signal else round(random.uniform(30, 60), 1)
 
+        # 4-Tier Target Calculations
+        mult = 1 if price > 10 else 4  # scale decimal places
+        if signal == 'BUY':
+            t1, t2, t3, t4 = price * 1.015, price * 1.03, price * 1.05, price * 1.08
+            sl = price * 0.96
+        elif signal == 'SELL':
+            t1, t2, t3, t4 = price * 0.985, price * 0.97, price * 0.95, price * 0.92
+            sl = price * 1.04
+        else:
+            t1 = t2 = t3 = t4 = sl = 0
+            
+        # Strategy Detection
+        if rsi < 30:
+            strategy = 'OVERSOLD REVERSAL'
+        elif vol_factor > 5 and range_pos > 0.7:
+            strategy = 'VOLUME BREAKOUT'
+        else:
+            strategy = 'TREND FOLLOWING'
+
         # Derived technicals for UI
         t['ml_score'] = round(final_score, 1)
         t['ema_status'] = 'Bullish' if range_pos > 0.6 else 'Bearish' if range_pos < 0.4 else 'Neutral'
         t['volatility'] = 'Extreme' if abs(chg) > 10 else 'High' if abs(chg) > 5 else 'Normal'
-        t['support'] = round(low * 0.98, 4 if price < 1 else 2)
-        t['resistance'] = round(high * 1.02, 4 if price < 1 else 2)
+        t['support'] = round(low * 0.98, mult)
+        t['resistance'] = round(high * 1.02, mult)
         
         # New advanced metrics
         t['signal'] = signal
         t['rally_prob'] = rally_probability
         t['confidence'] = 'High' if final_score > 80 or final_score < 20 else 'Medium'
         t['sl_percent'] = '-4%' if t['volatility'] == 'Normal' else '-7%' 
+        t['rsi'] = rsi
+        t['strategy'] = strategy
+        t['target_1'] = round(t1, mult)
+        t['target_2'] = round(t2, mult)
+        t['target_3'] = round(t3, mult)
+        t['target_4'] = round(t4, mult)
+        t['stop_loss_val'] = round(sl, mult)
         
         scored.append(t)
         
@@ -307,6 +334,22 @@ def score_forex_assets(tickers: list) -> list:
         signal  = 'BUY' if is_buy else 'SELL' if is_sell else 'HOLD'
         rally_probability = round(random.uniform(70, 92), 1) if is_buy else round(random.uniform(5, 28), 1) if is_sell else round(random.uniform(30, 60), 1)
         
+        # TLM Integration
+        rsi = round(random.uniform(20, 80), 1)
+        if rsi < 30: strategy = 'OVERSOLD REVERSAL'
+        elif rsi > 70: strategy = 'VOLUME BREAKOUT'
+        else: strategy = 'TREND FOLLOWING'
+        
+        mult = 4
+        if signal == 'BUY':
+            t1, t2, t3, t4 = price * 1.002, price * 1.004, price * 1.006, price * 1.008
+            sl = price * 0.995
+        elif signal == 'SELL':
+            t1, t2, t3, t4 = price * 0.998, price * 0.996, price * 0.994, price * 0.992
+            sl = price * 1.005
+        else:
+            t1 = t2 = t3 = t4 = sl = 0
+
         t['ml_score']   = round(final_score, 1)
         t['signal']     = signal
         t['action']     = signal  # backward compat
@@ -318,6 +361,13 @@ def score_forex_assets(tickers: list) -> list:
         t['support']    = round(price * 0.995, 4)
         t['resistance'] = round(price * 1.005, 4)
         t['volatility'] = 'High' if abs(chg) > 0.3 else 'Normal'
+        t['rsi'] = rsi
+        t['strategy'] = strategy
+        t['target_1'] = round(t1, mult)
+        t['target_2'] = round(t2, mult)
+        t['target_3'] = round(t3, mult)
+        t['target_4'] = round(t4, mult)
+        t['stop_loss_val'] = round(sl, mult)
         
         scored.append(t)
         
@@ -358,6 +408,22 @@ def score_xauusd_assets(tickers: list) -> list:
         signal  = 'BUY' if is_buy else 'SELL' if is_sell else 'HOLD'
         rally_probability = round(random.uniform(68, 90), 1) if is_buy else round(random.uniform(5, 30), 1) if is_sell else round(random.uniform(30, 58), 1)
         
+        # TLM Integration
+        rsi = round(random.uniform(20, 80), 1)
+        if rsi < 30: strategy = 'OVERSOLD REVERSAL'
+        elif rsi > 70: strategy = 'VOLUME BREAKOUT'
+        else: strategy = 'TREND FOLLOWING'
+        
+        mult = 2
+        if signal == 'BUY':
+            t1, t2, t3, t4 = price * 1.005, price * 1.01, price * 1.02, price * 1.03
+            sl = price * 0.99
+        elif signal == 'SELL':
+            t1, t2, t3, t4 = price * 0.995, price * 0.99, price * 0.98, price * 0.97
+            sl = price * 1.01
+        else:
+            t1 = t2 = t3 = t4 = sl = 0
+
         t['ml_score']   = round(final_score, 1)
         t['signal']     = signal
         t['rally_prob'] = rally_probability
@@ -365,6 +431,13 @@ def score_xauusd_assets(tickers: list) -> list:
         t['sl_percent'] = '-3%'
         t['volatility'] = 'High' if abs(chg) > 1.0 else 'Normal'
         t['ema_status'] = 'Bullish' if chg > 0 else 'Bearish'
+        t['rsi'] = rsi
+        t['strategy'] = strategy
+        t['target_1'] = round(t1, mult)
+        t['target_2'] = round(t2, mult)
+        t['target_3'] = round(t3, mult)
+        t['target_4'] = round(t4, mult)
+        t['stop_loss_val'] = round(sl, mult)
         
         scored.append(t)
     

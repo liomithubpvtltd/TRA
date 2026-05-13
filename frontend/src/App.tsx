@@ -10,6 +10,7 @@ import Reports from './pages/Reports';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Admin from './pages/Admin';
+import ModelEngine from './pages/ModelEngine';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -51,6 +52,7 @@ function LayoutContent() {
           <Route path="/calculators" element={<PrivateRoute><Calculators /></PrivateRoute>} />
           <Route path="/profile" element={<PrivateRoute><Profile /></PrivateRoute>} />
           <Route path="/admin" element={<AdminRoute><Admin /></AdminRoute>} />
+          <Route path="/model-engine" element={<PrivateRoute><ModelEngine /></PrivateRoute>} />
         </Routes>
       </div>
     </div>

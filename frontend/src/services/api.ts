@@ -154,12 +154,13 @@ function getSession(): MacroData['session'] {
   return 'Sydney';
 }
 
-export async function fetchPortfolio(): Promise<any> {
-  const res = await fetch(`${API_BASE}/portfolio`);
+export async function fetchPortfolio(email?: string): Promise<any> {
+  const url = email ? `${API_BASE}/portfolio?email=${email}` : `${API_BASE}/portfolio`;
+  const res = await fetch(url);
   if (res.ok) return await res.json();
   return { 
-    balance: 124530.42,
-    equity: 126210.00,
+    balance: 0.0,
+    equity: 0.0,
     positions: [], 
     history: [] 
   };
@@ -226,4 +227,37 @@ export async function fetchAdminUsers(): Promise<any[]> {
         if (res.ok) return await res.json();
     } catch (_) { }
     return [];
+}
+
+export async function updateUserBalance(userId: number, amount: number): Promise<any> {
+    const res = await fetch(`${API_BASE}/admin/users/${userId}/balance`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount })
+    });
+    return await res.json();
+}
+
+export async function fetchLiveRates(): Promise<any> {
+    const res = await fetch(`${API_BASE}/utility/rates`);
+    return await res.json();
+}
+
+export async function executeTrade(trade: { email: string, symbol: string, side: string, price: number, size: number }): Promise<any> {
+    const res = await fetch(`${API_BASE}/trade/execute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(trade)
+    });
+    return await res.json();
+}
+
+export async function startResearch(): Promise<any> {
+    const res = await fetch(`${API_BASE}/api/research/start`, { method: 'POST' });
+    return await res.json();
+}
+
+export async function stopResearch(): Promise<any> {
+    const res = await fetch(`${API_BASE}/api/research/stop`, { method: 'POST' });
+    return await res.json();
 }

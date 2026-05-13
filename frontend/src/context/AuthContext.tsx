@@ -5,12 +5,14 @@ interface User {
   email: string;
   phone?: string;
   role?: string;
+  balance?: number;
 }
 
 interface AuthContextType {
   user: User | null;
   login: (userData: User) => void;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   loading: boolean;
 }
 
@@ -38,8 +40,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem('vision_user');
   };
 
+  const refreshUser = async () => {
+    if (!user) return;
+    try {
+      const res = await fetch(`http://localhost:8001/api/admin/users`);
+      if (res.ok) {
+        const users = await res.json();
+        const me = users.find((u: any) => u.email === user.email);
+        if (me) {
+          const updated = { ...user, balance: me.balance, role: me.role };
+          setUser(updated);
+          localStorage.setItem('vision_user', JSON.stringify(updated));
+        }
+      }
+    } catch (e) {
+      console.error("Failed to refresh user data", e);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, refreshUser, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );

@@ -135,13 +135,13 @@ export default function ForexSignals({ signals, onAssetClick }: Props) {
 
               {/* Price */}
               <div style={{ fontSize: '13px', fontWeight: 800, color: '#f8fafc' }}>
-                 {sig.price.toLocaleString(undefined, { minimumFractionDigits: 4 })}
+                 {(sig.price || 0).toLocaleString(undefined, { minimumFractionDigits: 4 })}
               </div>
 
               {/* Support / Resistance */}
               <div style={{ textAlign: 'right' }}>
-                 <div style={{ fontSize: '11px', fontWeight: 700, color: '#ef4444' }}>R: {sig.resistance.toLocaleString(undefined, { minimumFractionDigits: 4 })}</div>
-                 <div style={{ fontSize: '10px', fontWeight: 600, color: '#10b981', marginTop: '2px' }}>S: {sig.support.toLocaleString(undefined, { minimumFractionDigits: 4 })}</div>
+                 <div style={{ fontSize: '11px', fontWeight: 700, color: '#ef4444' }}>R: {(sig.resistance || 0).toLocaleString(undefined, { minimumFractionDigits: 4 })}</div>
+                 <div style={{ fontSize: '10px', fontWeight: 600, color: '#10b981', marginTop: '2px' }}>S: {(sig.support || 0).toLocaleString(undefined, { minimumFractionDigits: 4 })}</div>
               </div>
 
             </motion.div>
