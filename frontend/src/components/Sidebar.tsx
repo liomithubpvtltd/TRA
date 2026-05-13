@@ -181,14 +181,20 @@ export default function Sidebar() {
             background: 'linear-gradient(135deg, #1e293b 0%, #0f172a 100%)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             fontSize: '14px', fontWeight: 700, color: '#d4af37', border: '1px solid rgba(212,175,55,0.2)'
-          }}>MM</div>
+          }}>
+            {user?.name ? user.name.substring(0, 2).toUpperCase() : 'MM'}
+          </div>
           <div style={{ flex: 1, minWidth: 0 }}>
-            <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>Mayank Meralya</div>
-            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>VIP TRADER</div>
+            <div style={{ fontSize: '13px', fontWeight: 700, color: '#f8fafc', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {user?.name || 'Mayank Meraiya'}
+            </div>
+            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600 }}>
+              {user?.role === 'admin' ? 'ADMINISTRATOR' : 'VIP TRADER'}
+            </div>
           </div>
           <Bell size={18} color="#64748b" style={{ cursor: 'pointer' }} />
           <div 
-            onClick={() => { if(window.confirm("Logout from VISION?")) { logout(); } }}
+            onClick={() => logout()}
             style={{ 
               marginLeft: '4px', cursor: 'pointer', padding: '6px', 
               borderRadius: '8px', background: 'rgba(239,68,68,0.1)', 

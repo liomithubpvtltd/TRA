@@ -219,3 +219,11 @@ export async function loginUser(data: any): Promise<any> {
     });
     return await res.json();
 }
+
+export async function fetchAdminUsers(): Promise<any[]> {
+    try {
+        const res = await fetch(`${API_BASE}/admin/users`);
+        if (res.ok) return await res.json();
+    } catch (_) { }
+    return [];
+}

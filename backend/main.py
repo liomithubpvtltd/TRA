@@ -104,6 +104,27 @@ def login(creds: UserLogin):
     finally:
         session.close()
 
+@app.get('/api/admin/users')
+def get_all_users():
+    """Fetch all users and their registration data for the Admin panel."""
+    session = db_service.Session()
+    try:
+        users = session.query(User).all()
+        result = []
+        for u in users:
+            result.append({
+                "id": u.id,
+                "name": u.name,
+                "email": u.email,
+                "phone": u.phone,
+                "role": u.role,
+                "created_at": u.created_at.isoformat() if u.created_at else None,
+                "balance": 0.0, # Placeholder for real wallet balance integration
+                "status": "approved" if u.role == "admin" else "pending"
+            })
+        return result
+    finally:
+        session.close()
 
 def ticker_info(df, symbol, multiply=1):
     if df.empty:

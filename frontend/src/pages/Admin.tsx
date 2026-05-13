@@ -1,18 +1,18 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import GlassCard from '../components/GlassCard';
 import { Users, CheckCircle, XCircle, DollarSign, ShieldAlert, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
-
-const mockUsers = [
-  { id: 1, name: 'John Doe', email: 'john@example.com', status: 'pending', balance: 0 },
-  { id: 2, name: 'Jane Smith', email: 'jane@smith.io', status: 'approved', balance: 125000 },
-  { id: 3, name: 'Tester Bot', email: 'tester@vision.ai', status: 'pending', balance: 0 },
-  { id: 4, name: 'Alice Wonder', email: 'alice@crypto.com', status: 'rejected', balance: 0 },
-];
+import { fetchAdminUsers } from '../services/api';
 
 export default function Admin() {
-  const [users, setUsers] = useState(mockUsers);
+  const [users, setUsers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+
+  useEffect(() => {
+    fetchAdminUsers().then(data => {
+      if (data && data.length > 0) setUsers(data);
+    });
+  }, []);
 
   const handleAction = (id: number, action: 'approved' | 'rejected') => {
     setUsers(users.map(u => u.id === id ? { ...u, status: action } : u));
@@ -51,7 +51,9 @@ export default function Admin() {
              <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '800px' }}>
                <thead>
                  <tr style={{ textAlign: 'left', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                   <th style={thStyle}>USER</th>
+                   <th style={thStyle}>USER DETAILS</th>
+                   <th style={thStyle}>CONTACT</th>
+                   <th style={thStyle}>REGISTERED</th>
                    <th style={thStyle}>STATUS</th>
                    <th style={thStyle}>BALANCE</th>
                    <th style={{ ...thStyle, textAlign: 'right' }}>ACTIONS</th>
@@ -69,7 +71,16 @@ export default function Admin() {
                      <td style={tdStyle}>
                        <div>
                          <div style={{ fontSize: '14px', fontWeight: 700, color: '#f8fafc' }}>{user.name}</div>
-                         <div style={{ fontSize: '12px', color: '#64748b' }}>{user.email}</div>
+                         <div style={{ fontSize: '12px', color: '#64748b' }}>{user.role.toUpperCase()}</div>
+                       </div>
+                     </td>
+                     <td style={tdStyle}>
+                       <div style={{ fontSize: '12px', color: '#f8fafc' }}>{user.email}</div>
+                       <div style={{ fontSize: '12px', color: '#64748b' }}>{user.phone || 'No phone'}</div>
+                     </td>
+                     <td style={tdStyle}>
+                       <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                         {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Unknown'}
                        </div>
                      </td>
                      <td style={tdStyle}>
