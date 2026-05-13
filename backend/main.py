@@ -145,11 +145,17 @@ def market_data(category: str = Query('XAUUSD')):
     dxy  = _fetch_ohlcv('DX-Y.NYB', period='5d', interval='1h')
     us10 = _fetch_ohlcv('^TNX', period='5d', interval='1h')
 
-    return [
+    raw = [
         ticker_info(gold, 'XAU/USD'),
         ticker_info(dxy,  'DXY'),
         ticker_info(us10, 'US10Y'),
     ]
+    try:
+        from ml.inference import score_xauusd_assets
+        return score_xauusd_assets(raw)
+    except Exception as e:
+        print(f"Error scoring XAUUSD: {e}")
+        return raw
 
 @app.get('/api/assets/crypto')
 def get_crypto_assets(limit: int = 50):
