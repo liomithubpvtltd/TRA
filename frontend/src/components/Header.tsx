@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { Bell } from 'lucide-react';
 
 interface Props {
   lastUpdated: string;
@@ -72,7 +73,7 @@ export default function Header({ lastUpdated, activeCategory, setActiveCategory 
 
       {/* Right side - Hidden or compact on mobile */}
       {!isMobile && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           <div style={{ textAlign: 'right' }}>
              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', justifyContent: 'flex-end' }}>
                 <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px #10b981' }} />
@@ -82,6 +83,10 @@ export default function Header({ lastUpdated, activeCategory, setActiveCategory 
                {timezone.split('/')[1] || timezone} · {lastUpdated}
              </div>
           </div>
+           <div style={{ position: 'relative', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', background: 'rgba(255,255,255,0.03)', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.05)' }}>
+             <Bell size={18} color="#64748b" />
+             <div style={{ position: 'absolute', top: '6px', right: '6px', width: '6px', height: '6px', borderRadius: '50%', background: '#ef4444', boxShadow: '0 0 6px #ef4444' }} />
+           </div>
         </div>
       )}
     </header>

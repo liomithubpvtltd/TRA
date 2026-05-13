@@ -192,7 +192,6 @@ export default function Sidebar() {
               {user?.role === 'admin' ? 'ADMINISTRATOR' : 'VIP TRADER'}
             </div>
           </div>
-          <Bell size={18} color="#64748b" style={{ cursor: 'pointer' }} />
           <div 
             onClick={() => logout()}
             style={{ 
